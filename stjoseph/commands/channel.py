@@ -104,6 +104,12 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
     is_flag=True,
     help="Flag indicating whether this is a dry-run",
 )
+@click.option(
+    "--force",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether to overwrite even if the mass exists.",
+)
 @click.pass_context
 async def schedule_mass(  # noqa: PLR0913
     ctx: click.Context,
@@ -113,6 +119,7 @@ async def schedule_mass(  # noqa: PLR0913
     token: PathLike,
     public: bool,
     dry_run: bool,
+    force: bool,
 ) -> None:
     if mass_date is None:
         mass_date = date
@@ -125,9 +132,13 @@ async def schedule_mass(  # noqa: PLR0913
 
     # Check if this mass is already scheduled:
     scheduled_dates = channel_svc.get_scheduled_dates()
-    if date.astimezone(datetime.UTC) in scheduled_dates:
-        logger.warning("%s is already scheduled.", date)
-        return
+    broadcast_id = scheduled_dates.get(date.astimezone(datetime.UTC))
+    if broadcast_id is not None:
+        if not force:
+            logger.warning("%s is already scheduled.", date)
+            return
+
+        logger.info("%s is already scheduled under %s.", date, broadcast_id)
 
     # Query the mass readings:
     async with USCCB() as usccb:
@@ -141,7 +152,10 @@ async def schedule_mass(  # noqa: PLR0913
     # Generate title/description and publish:
     title = generators.generate_title(date)
     description = generators.generate_description(mass)
-    channel_svc.schedule_broadcast(title, description, date, is_public=public, dry_run=dry_run)
+    if broadcast_id is None:
+        channel_svc.schedule_broadcast(title, description, date, is_public=public, dry_run=dry_run)
+    else:
+        channel_svc.update_broadcast(broadcast_id, title, description, date, is_public=public, dry_run=dry_run)
 
 
 @cli.command()
@@ -173,6 +187,12 @@ async def schedule_mass(  # noqa: PLR0913
     is_flag=True,
     help="Flag indicating whether this is a dry-run",
 )
+@click.option(
+    "--force",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether to overwrite even if the mass exists.",
+)
 async def schedule_masses(  # noqa: PLR0913
     start: datetime.datetime | None,
     end: datetime.datetime | None,
@@ -180,6 +200,7 @@ async def schedule_masses(  # noqa: PLR0913
     token: PathLike,
     public: bool,
     dry_run: bool,
+    force: bool,
 ) -> None:
     creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
@@ -191,8 +212,11 @@ async def schedule_masses(  # noqa: PLR0913
     async with USCCB() as usccb:
         start_date = start.date() if start else USCCB.today()
         end_date = end.date() if end else None
-        dates = usccb.get_sunday_mass_dates(start_date, end_date)
-        dates = [d for d in dates if utils.to_saturday_mass(d).astimezone(datetime.UTC) not in scheduled_dates]
+        dates = list(usccb.get_sunday_mass_dates(start_date, end_date))
+        if not force:
+            # Filter out all dates that have already been scheduled:
+            dates = [d for d in dates if utils.to_saturday_mass(d).astimezone(datetime.UTC) not in scheduled_dates]
+
         if not dates:
             logger.info("There are no new dates to schedule.")
             return
@@ -207,6 +231,8 @@ async def schedule_masses(  # noqa: PLR0913
             else:
                 missing += 1
 
+    logger.info("Got %d masses", len(masses))
+
     if missing:
         logger.warning("There are %d missing", missing)
 
@@ -216,4 +242,10 @@ async def schedule_masses(  # noqa: PLR0913
         date = utils.to_saturday_mass(mass.date)
         title = generators.generate_title(date)
         description = generators.generate_description(mass)
+        if force:
+            broadcast_id = scheduled_dates.get(utils.to_saturday_mass(mass.date).astimezone(datetime.UTC))
+            if broadcast_id is not None:
+                channel_svc.update_broadcast(broadcast_id, title, description, date, is_public=public, dry_run=dry_run)
+                continue
+
         channel_svc.schedule_broadcast(title, description, date, is_public=public, dry_run=dry_run)

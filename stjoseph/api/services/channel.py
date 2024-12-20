@@ -46,9 +46,9 @@ class Channel:
     def list_scheduled_livestreams(self) -> Iterable[models.LiveStream]:
         return map(self._create_live_stream_from_item, self.broadcasts())
 
-    def get_scheduled_dates(self) -> set[datetime.datetime]:
-        """Gets a list of the upcoming scheduled dates."""
-        return {x.scheduled_start for x in self.list_scheduled_livestreams() if x.scheduled_start is not None}
+    def get_scheduled_dates(self) -> dict[datetime.datetime, str]:
+        """Gets a list of the upcoming scheduled dates to id."""
+        return {x.scheduled_start: x.id for x in self.list_scheduled_livestreams() if x.scheduled_start is not None}
 
     def delete_broadcast(self, broadcast_id: str) -> None:
         youtube = self._create_resource()
@@ -78,13 +78,65 @@ class Channel:
         logger.info("Date: %s", scheduled_start_time)
         logger.info("Title: %s", title)
         logger.info("Visibility: %s", privacy_status)
-        logger.info("Description:\n%s", description)
+        logger.info("Description: %s", utils.truncate(description, constants.MAX_FIELD_LEN))
 
         if dry_run:
             return constants.NO_OP
 
         youtube = self._create_resource()
         broadcast_request = youtube.liveBroadcasts().insert(
+            part="snippet,status",
+            body=body,
+        )
+
+        broadcast_response = self._execute_with_retry(broadcast_request)
+
+        broadcast_id = broadcast_response["id"]
+        logger.info(
+            "Successfully scheduled ID: %s, url: %s",
+            broadcast_id,
+            constants.LIVE_STREAMING_URL_FMT.format(VIDEO_ID=broadcast_id),
+        )
+
+        # Upload the thumbnail
+        assert resources.THUMBNAIL.is_file()
+        media = MediaFileUpload(resources.THUMBNAIL.as_posix(), mimetype=resources.THUMBNAIL_MIME_TYPE)
+        thumbnail_request = youtube.thumbnails().set(videoId=broadcast_id, media_body=media)
+        self._execute_with_retry(thumbnail_request)
+        return broadcast_id
+
+    def update_broadcast(  # noqa: PLR0913
+        self,
+        broadcast_id: str,
+        title: str,
+        description: str,
+        scheduled_start_time: datetime.datetime,
+        is_public: bool = False,
+        dry_run: bool = False,
+    ) -> str:
+        privacy_status = "public" if is_public else "private"
+        body = {
+            "id": broadcast_id,
+            "snippet": {
+                "title": title,
+                "description": description,
+                "scheduledStartTime": utils.to_gcloude_datetime(scheduled_start_time),
+                "scheduledEndTime": utils.to_gcloude_datetime(scheduled_start_time + datetime.timedelta(hours=1)),
+            },
+            "status": {"privacyStatus": privacy_status, "selfDeclaredMadeForKids": True},
+        }
+
+        logger.info("Updating mass%s", " [DRY-RUN]" if dry_run else "")
+        logger.info("Date: %s", scheduled_start_time)
+        logger.info("Title: %s", title)
+        logger.info("Visibility: %s", privacy_status)
+        logger.info("Description: %s", utils.truncate(description, constants.MAX_FIELD_LEN))
+
+        if dry_run:
+            return constants.NO_OP
+
+        youtube = self._create_resource()
+        broadcast_request = youtube.liveBroadcasts().update(
             part="snippet,status",
             body=body,
         )

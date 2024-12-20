@@ -247,13 +247,13 @@ files = [
 
 [[package]]
 name = "catholic-mass-readings"
-version = "0.2.2"
+version = "0.3.0"
 description = "Provides an API for scraping the web page from https://bible.usccb.org/bible/readings/ to get the readings"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "catholic_mass_readings-0.2.2-py3-none-any.whl", hash = "sha256:2adbfd80b26012db10421f9c5cb38b1e55659cd290ac2cc6bdc4f4b037de1412"},
-    {file = "catholic_mass_readings-0.2.2.tar.gz", hash = "sha256:b9083b20edfa814f361947e3152a02a3a170f80fa0bbc066bd05cd31b9ef66da"},
+    {file = "catholic_mass_readings-0.3.0-py3-none-any.whl", hash = "sha256:894f5011cb4d37096dd0a2e627e0f19ab6c14f48e44983e3979a5648aeb0ce1a"},
+    {file = "catholic_mass_readings-0.3.0.tar.gz", hash = "sha256:16df72f84831ef5e8f6b8ebb208ad7428f7c2d8a5dff733150ba39d1be2aaebc"},
 ]
 
 [package.dependencies]
@@ -1439,6 +1439,17 @@ files = [
 ]
 
 [[package]]
+name = "types-python-dateutil"
+version = "2.9.0.20241206"
+description = "Typing stubs for python-dateutil"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types_python_dateutil-2.9.0.20241206-py3-none-any.whl", hash = "sha256:e248a4bc70a486d3e3ec84d0dc30eec3a5f979d6e7ee4123ae043eedbb987f53"},
+    {file = "types_python_dateutil-2.9.0.20241206.tar.gz", hash = "sha256:18f493414c26ffba692a72369fea7a154c502646301ebfe3d56a04b3767284cb"},
+]
+
+[[package]]
 name = "types-pytz"
 version = "2024.2.0.20241003"
 description = "Typing stubs for pytz"
@@ -1598,4 +1609,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "0713ffb6e99618dc7f29affd3401ad4dbe81e030e25cf37e684aeab598dc5357"
+content-hash = "480388a94f552eb57a6a65d00f5c23a8dacfb5e9925e70b02d59575013f79a1c"

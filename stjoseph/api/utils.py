@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime
 
+import dateutil.tz
+
 from stjoseph.api import constants, models
 
 
@@ -24,11 +26,29 @@ def to_saturday_mass(dt: datetime.datetime | datetime.date) -> datetime.datetime
     assert dt is not None
     assert dt.weekday() == models.Weekday.SUNDAY
     saturday = dt - datetime.timedelta(days=1)
-    return datetime.datetime(  # noqa: DTZ001
+    return datetime.datetime(
         saturday.year,
         saturday.month,
         saturday.day,
         constants.SATURDAY_EVENING_MASS[0],
         constants.SATURDAY_EVENING_MASS[1],
         0,
+        tzinfo=dateutil.tz.tzlocal(),
     )
+
+
+def truncate(string: str, max_length: int = constants.MAX_FIELD_LEN) -> str:
+    """
+    Truncates the string to max_length.
+    If the character at string[max_length] is not a space, it searches for the first preceding
+    whitespace character and truncastes from there.
+    """
+    string = string.replace("\n", " ")
+    if len(string) > max_length:
+        idx = max_length
+        for idx in range(max_length, 0, -1):
+            if string[idx] == " ":
+                break
+        string = string[:max_length] if idx > 0 else string[:idx]
+
+    return string

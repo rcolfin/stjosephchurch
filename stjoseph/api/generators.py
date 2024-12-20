@@ -25,6 +25,6 @@ def _get_mass_text(mass: Mass) -> str:
     """Returns a formatted representation of the mass."""
     lines: list[str] = []
     for section in mass.sections:
-        lines.extend(f"\n{section.header}: {reading}\n\n{reading.text}" for reading in section.readings[:1])
+        lines.extend("\n" + reading.format(section) for reading in section.readings[:1])
 
     return "\n".join(map(str, lines))

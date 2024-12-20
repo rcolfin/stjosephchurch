@@ -36,3 +36,15 @@ To schedule masses a month in advance:
 ```sh
 python -m stjoseph schedule-masses --public
 ```
+
+or through the launcher...
+
+```sh
+scripts/launch.sh schedule-mass '2024-12-21 17:30' --public
+```
+
+To schedule masses a month in advance:
+
+```sh
+scripts/launch.sh schedule-masses --public
+```

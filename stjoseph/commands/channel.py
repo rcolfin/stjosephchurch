@@ -37,7 +37,7 @@ _MONTH_LATER: Final[str] = (USCCB.today() + datetime.timedelta(weeks=4)).strftim
     default=constants.TOKEN_FILE,
     help="The path to the token file",
 )
-def list_schedule_masss(credentials: PathLike, token: PathLike) -> None:
+def list_mass_schedules(credentials: PathLike, token: PathLike) -> None:
     creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
     streams = channel_svc.list_scheduled_livestreams()

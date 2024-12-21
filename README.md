@@ -4,7 +4,8 @@
 
 Package to set up and manage the Live Stream for [Saint Joseph Church Lincoln Park NJ](https://www.youtube.com/@saintjosephchurchlincolnpa905)
 
-It relies on the [YouTube Data API v3](https://developers.google.com/youtube/v3) to interact with the YouTube Channel.
+To reduce the manual steps involved with setting up a Scheduled Live Stream which includes the [Readings](https://bible.usccb.org/bible/readings/), I came up with this app to sources the Readings from [catholic-mass-readings](https://github.com/rcolfin/catholic-mass-readings) package, then utilizing the [YouTube Data API v3](https://developers.google.com/youtube/v3) to insert (or update) the masses on the YouTube Channel.  Through the CLI below, I can schedule the masses for the entire year (only what is available via the [Readings](https://bible.usccb.org/bible/readings/) website) within a matter of seconds.
+
 
 ## Development
 

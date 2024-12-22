@@ -11,13 +11,13 @@ if [ ! -f credentials.json ] || [ ! -f token.json ]; then
     gcloud storage cp gs://st-joseph-4ed7624155de0493/*.json .
 fi
 
-BEFORE_CREDENTIALS=$(stat -f "%m" -t '%Z' credentials.json)
-BEFORE_TOKEN=$(stat -f "%m" -t '%Z' token.json)
+BEFORE_CREDENTIALS=$(echo 'import os;print(int(os.path.getmtime("credentials.json")))' | python -s)
+BEFORE_TOKEN=$(echo 'import os;print(int(os.path.getmtime("token.json")))' | python -s)
 
 python -m stjoseph "${@}"
 
-AFTER_CREDENTIALS=$(stat -f "%m" -t '%Z' credentials.json)
-AFTER_TOKEN=$(stat -f "%m" -t '%Z' token.json)
+AFTER_CREDENTIALS=$(echo 'import os;print(int(os.path.getmtime("credentials.json")))' | python -s)
+AFTER_TOKEN=$(echo 'import os;print(int(os.path.getmtime("token.json")))' | python -s)
 
 if [ "${AFTER_CREDENTIALS}" \> "${BEFORE_CREDENTIALS}" ]; then
     echo gcloud storage cp credentials.json gs://st-joseph-4ed7624155de0493/

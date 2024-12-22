@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _TODAY: Final[str] = USCCB.today().strftime(constants.DATE_TIME_FMT)
-_MONTH_LATER: Final[str] = (USCCB.today() + datetime.timedelta(weeks=4)).strftime(constants.DATE_TIME_FMT)
+_MONTH_LATER: Final[str] = utils.add_months(USCCB.today(), 1).strftime(constants.DATE_TIME_FMT)
 
 
 @cli.command()
@@ -213,6 +213,10 @@ async def schedule_masses(  # noqa: PLR0913
         start_date = start.date() if start else USCCB.today()
         end_date = end.date() if end else None
         dates = list(usccb.get_sunday_mass_dates(start_date, end_date))
+        # We schedule Sunday masses at 5:30 PM the Saturday before,
+        # if running this on that Sunday, we want to skip dates
+        # that have already passed.
+        dates = [d for d in dates if utils.to_saturday_mass(d).date() >= USCCB.today()]
         if not force:
             # Filter out all dates that have already been scheduled:
             dates = [d for d in dates if utils.to_saturday_mass(d).astimezone(datetime.UTC) not in scheduled_dates]

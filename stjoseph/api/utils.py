@@ -52,3 +52,12 @@ def truncate(string: str, max_length: int = constants.MAX_FIELD_LEN) -> str:
         string = string[:max_length] if idx > 0 else string[:idx]
 
     return string
+
+
+def add_months(dt: datetime.date, months_to_add: int) -> datetime.date:
+    """Adds the number of monts to the specified datetime."""
+    return datetime.date(
+        dt.year + (dt.month + months_to_add - 1) // 12,
+        (dt.month + months_to_add - 1) % 12 + 1,
+        dt.day,
+    )

@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 import asyncclick as click
-from catholic_mass_readings import USCCB
+from catholic_mass_readings import USCCB, models
 
 from stjoseph.api import constants, generators, oauth2, services, utils
 from stjoseph.commands.common import cli
@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 _TODAY: Final[str] = USCCB.today().strftime(constants.DATE_TIME_FMT)
 _MONTH_LATER: Final[str] = utils.add_months(USCCB.today(), 1).strftime(constants.DATE_TIME_FMT)
+_TYPES: Final[list[str]] = [t.name for t in models.MassType]
+
+
+def _get_mass_types(ctx: click.Context, param: click.Option, value: tuple[str, ...]) -> list[models.MassType] | None:
+    return list(map(models.MassType, value)) if value else None
 
 
 @cli.command()
@@ -75,8 +80,17 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
 @click.option(
     "-m",
     "--mass-date",
-    type=click.DateTime([constants.DATE_TIME_FMT]),
+    type=click.DateTime([constants.DATE_FMT]),
     help="The date of the mass to use for the contents of the liturgy",
+)
+@click.option(
+    "-t",
+    "--type",
+    "types",
+    type=click.Choice(_TYPES, case_sensitive=False),
+    multiple=True,
+    help="The mass type",
+    callback=_get_mass_types,
 )
 @click.option(
     "-c",
@@ -115,6 +129,7 @@ async def schedule_mass(  # noqa: PLR0913
     ctx: click.Context,
     date: datetime.datetime,
     mass_date: datetime.datetime | None,
+    types: list[models.MassType] | None,
     credentials: PathLike,
     token: PathLike,
     public: bool,
@@ -142,7 +157,7 @@ async def schedule_mass(  # noqa: PLR0913
 
     # Query the mass readings:
     async with USCCB() as usccb:
-        mass = await usccb.get_mass_from_date(mass_date.date())
+        mass = await usccb.get_mass_from_date(mass_date.date(), types)
 
     if not mass:
         logger.error("Failed to find a mass on %s", mass_date)
@@ -161,6 +176,15 @@ async def schedule_mass(  # noqa: PLR0913
 @cli.command()
 @click.option("-s", "--start", type=click.DateTime([constants.DATE_TIME_FMT]), default=_TODAY)
 @click.option("-e", "--end", type=click.DateTime([constants.DATE_TIME_FMT]), default=_MONTH_LATER)
+@click.option(
+    "-t",
+    "--type",
+    "types",
+    type=click.Choice(_TYPES, case_sensitive=False),
+    multiple=True,
+    help="The mass type",
+    callback=_get_mass_types,
+)
 @click.option(
     "-c",
     "--credentials",
@@ -196,6 +220,7 @@ async def schedule_mass(  # noqa: PLR0913
 async def schedule_masses(  # noqa: PLR0913
     start: datetime.datetime | None,
     end: datetime.datetime | None,
+    types: list[models.MassType] | None,
     credentials: PathLike,
     token: PathLike,
     public: bool,
@@ -228,7 +253,7 @@ async def schedule_masses(  # noqa: PLR0913
         logger.info("Querying for mass for %s", list(map(str, dates)))
         masses: list[Mass] = []
         missing = 0
-        for task in asyncio.as_completed([usccb.get_mass_from_date(dt) for dt in dates]):
+        for task in asyncio.as_completed([usccb.get_mass_from_date(dt, types) for dt in dates]):
             mass = await task
             if mass is not None:
                 masses.append(mass)

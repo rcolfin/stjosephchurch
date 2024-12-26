@@ -63,6 +63,7 @@ class Channel:
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
+        self._assert_description_len(description)
         privacy_status = "public" if is_public else "private"
         body = {
             "snippet": {
@@ -114,6 +115,7 @@ class Channel:
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
+        self._assert_description_len(description)
         privacy_status = "public" if is_public else "private"
         body = {
             "id": broadcast_id,
@@ -210,3 +212,9 @@ class Channel:
         snippet = item["snippet"]
         scheduled_start = Channel._parse_datetime(snippet.get("scheduledStartTime"))
         return models.LiveStream(item["id"], snippet["title"], snippet["description"], scheduled_start)
+
+    @staticmethod
+    def _assert_description_len(description: str) -> None:
+        if len(description) > constants.MAX_DESCRIPTION_LENGTH:
+            msg = f"Description is larger than {constants.MAX_DESCRIPTION_LENGTH}"
+            raise ValueError(msg)

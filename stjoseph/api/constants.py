@@ -24,3 +24,5 @@ NO_OP: Final[str] = "NOOP"
 LIVE_STREAMING_URL_FMT: Final[str] = "https://studio.youtube.com/video/{VIDEO_ID}/livestreaming"
 
 DEFAULT_TIMEZONE: Final[datetime.tzinfo] = pytz.timezone("America/New_York")
+
+MAX_DESCRIPTION_LENGTH: Final[int] = 5000  # the description maximum length

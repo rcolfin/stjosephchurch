@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _TODAY: Final[str] = USCCB.today().strftime(constants.DATE_TIME_FMT)
-_MONTH_LATER: Final[str] = utils.add_months(USCCB.today(), 1).strftime(constants.DATE_TIME_FMT)
 _TYPES: Final[list[str]] = [t.name for t in models.MassType]
 
 
@@ -174,8 +173,8 @@ async def schedule_mass(  # noqa: PLR0913
 
 
 @cli.command()
-@click.option("-s", "--start", type=click.DateTime([constants.DATE_TIME_FMT]), default=_TODAY)
-@click.option("-e", "--end", type=click.DateTime([constants.DATE_TIME_FMT]), default=_MONTH_LATER)
+@click.option("-s", "--start", type=click.DateTime([constants.DATE_FMT]), default=_TODAY)
+@click.option("-e", "--end", type=click.DateTime([constants.DATE_FMT]))
 @click.option(
     "-t",
     "--type",
@@ -218,7 +217,7 @@ async def schedule_mass(  # noqa: PLR0913
     help="Flag indicating whether to overwrite even if the mass exists.",
 )
 async def schedule_masses(  # noqa: PLR0913
-    start: datetime.datetime | None,
+    start: datetime.datetime,
     end: datetime.datetime | None,
     types: list[models.MassType] | None,
     credentials: PathLike,
@@ -230,13 +229,14 @@ async def schedule_masses(  # noqa: PLR0913
     creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
 
+    start_date = start.date()
+    end_date = utils.add_months(start_date, 1) if end is None else end.date()
+
     # Check if this mass is already scheduled:
     scheduled_dates = channel_svc.get_scheduled_dates()
 
     # Query the mass readings:
     async with USCCB() as usccb:
-        start_date = start.date() if start else USCCB.today()
-        end_date = end.date() if end else None
         dates = list(usccb.get_sunday_mass_dates(start_date, end_date))
         # We schedule Sunday masses at 5:30 PM the Saturday before,
         # if running this on that Sunday, we want to skip dates

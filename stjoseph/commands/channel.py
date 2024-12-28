@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_TODAY: Final[str] = USCCB.today().strftime(constants.DATE_TIME_FMT)
+_TODAY: Final[str] = USCCB.today().strftime(constants.DATE_FMT)
 _TYPES: Final[list[str]] = [t.name for t in models.MassType]
 
 

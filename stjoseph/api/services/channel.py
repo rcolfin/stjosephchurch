@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import datetime
 import logging
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import backoff
@@ -13,6 +13,7 @@ from googleapiclient.http import HttpRequest, MediaFileUpload
 from stjoseph.api import constants, models, oauth2, resources, utils
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import Callable, Iterable
 
 
@@ -28,15 +29,10 @@ class Channel:
         self.creds = creds
 
     def get_channels(self) -> dict[str, Any]:
-        youtube = self._create_resource()
-        return youtube.channels().list(part="snippet", mine=True).execute()
+        return self._execute_with_retry(lambda resource: resource.channels().list(part="snippet", mine=True))
 
     def broadcasts(self) -> Iterable[dict[str, Any]]:
-        def get_live_broadcasts() -> Resource:
-            return self._create_resource().liveBroadcasts()
-
         return self._get_pages(
-            get_live_broadcasts,
             "items",
             part="id,snippet,status",
             broadcastStatus="upcoming",
@@ -51,60 +47,27 @@ class Channel:
         return {x.scheduled_start: x.id for x in self.list_scheduled_livestreams() if x.scheduled_start is not None}
 
     def delete_broadcast(self, broadcast_id: str) -> None:
-        youtube = self._create_resource()
-        youtube.liveBroadcasts().delete(id=broadcast_id).execute()
+        self._execute_with_retry(lambda resource: resource.liveBroadcasts().delete(id=broadcast_id))
         logger.info("Broadcast with ID %s has been deleted.", broadcast_id)
 
-    def schedule_broadcast(
+    def schedule_broadcast(  # noqa: PLR0913
         self,
         title: str,
         description: str,
         scheduled_start_time: datetime.datetime,
+        scheduled_end_time: datetime.datetime | None = None,
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
-        self._assert_description_len(description)
-        privacy_status = "public" if is_public else "private"
-        body = {
-            "snippet": {
-                "title": title,
-                "description": description,
-                "scheduledStartTime": utils.to_gcloude_datetime(scheduled_start_time),
-                "scheduledEndTime": utils.to_gcloude_datetime(scheduled_start_time + datetime.timedelta(hours=1)),
-            },
-            "status": {"privacyStatus": privacy_status, "selfDeclaredMadeForKids": True},
-        }
-
-        logger.info("Scheduling mass%s", " [DRY-RUN]" if dry_run else "")
-        logger.info("Date: %s", scheduled_start_time)
-        logger.info("Title: %s", title)
-        logger.info("Visibility: %s", privacy_status)
-        logger.info("Description: %s", utils.truncate(description, constants.MAX_FIELD_LEN))
-
-        if dry_run:
-            return constants.NO_OP
-
-        youtube = self._create_resource()
-        broadcast_request = youtube.liveBroadcasts().insert(
-            part="snippet,status",
-            body=body,
+        return self._upsert_broadcast(
+            None,
+            title,
+            description,
+            scheduled_start_time=scheduled_start_time,
+            scheduled_end_time=scheduled_end_time,
+            is_public=is_public,
+            dry_run=dry_run,
         )
-
-        broadcast_response = self._execute_with_retry(broadcast_request)
-
-        broadcast_id = broadcast_response["id"]
-        logger.info(
-            "Successfully scheduled ID: %s, url: %s",
-            broadcast_id,
-            constants.LIVE_STREAMING_URL_FMT.format(VIDEO_ID=broadcast_id),
-        )
-
-        # Upload the thumbnail
-        assert resources.THUMBNAIL.is_file()
-        media = MediaFileUpload(resources.THUMBNAIL.as_posix(), mimetype=resources.THUMBNAIL_MIME_TYPE)
-        thumbnail_request = youtube.thumbnails().set(videoId=broadcast_id, media_body=media)
-        self._execute_with_retry(thumbnail_request)
-        return broadcast_id
 
     def update_broadcast(  # noqa: PLR0913
         self,
@@ -112,24 +75,55 @@ class Channel:
         title: str,
         description: str,
         scheduled_start_time: datetime.datetime,
+        scheduled_end_time: datetime.datetime | None = None,
+        is_public: bool = False,
+        dry_run: bool = False,
+    ) -> str:
+        return self._upsert_broadcast(
+            broadcast_id,
+            title,
+            description,
+            scheduled_start_time=scheduled_start_time,
+            scheduled_end_time=scheduled_end_time,
+            is_public=is_public,
+            dry_run=dry_run,
+        )
+
+    def _upsert_broadcast(  # noqa: PLR0913
+        self,
+        broadcast_id: str | None,
+        title: str,
+        description: str,
+        scheduled_start_time: datetime.datetime,
+        scheduled_end_time: datetime.datetime | None = None,
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
         self._assert_description_len(description)
         privacy_status = "public" if is_public else "private"
-        body = {
-            "id": broadcast_id,
+        body: dict[str, Any] = {
             "snippet": {
                 "title": title,
                 "description": description,
                 "scheduledStartTime": utils.to_gcloude_datetime(scheduled_start_time),
-                "scheduledEndTime": utils.to_gcloude_datetime(scheduled_start_time + datetime.timedelta(hours=1)),
             },
             "status": {"privacyStatus": privacy_status, "selfDeclaredMadeForKids": True},
         }
 
-        logger.info("Updating mass%s", " [DRY-RUN]" if dry_run else "")
-        logger.info("Date: %s", scheduled_start_time)
+        if scheduled_end_time is not None:
+            body["snippet"]["scheduledEndTime"] = utils.to_gcloude_datetime(scheduled_end_time)
+
+        if broadcast_id is not None:
+            body["id"] = broadcast_id
+            logger.info("Updating mass%s", " [DRY-RUN]" if dry_run else "")
+
+        else:
+            logger.info("Scheduling mass%s", " [DRY-RUN]" if dry_run else "")
+
+        logger.info("Start Time: %s", scheduled_start_time)
+        if scheduled_end_time is not None:
+            logger.info("Stop Time: %s", scheduled_end_time)
+
         logger.info("Title: %s", title)
         logger.info("Visibility: %s", privacy_status)
         logger.info("Description: %s", utils.truncate(description, constants.MAX_FIELD_LEN))
@@ -137,15 +131,14 @@ class Channel:
         if dry_run:
             return constants.NO_OP
 
-        youtube = self._create_resource()
-        broadcast_request = youtube.liveBroadcasts().update(
-            part="snippet,status",
-            body=body,
+        broadcast_response = self._execute_with_retry(
+            lambda resource: resource.liveBroadcasts().insert(
+                part="snippet,status",
+                body=body,
+            )
         )
 
-        broadcast_response = self._execute_with_retry(broadcast_request)
-
-        broadcast_id = broadcast_response["id"]
+        broadcast_id = cast(str, broadcast_response["id"])
         logger.info(
             "Successfully scheduled ID: %s, url: %s",
             broadcast_id,
@@ -155,57 +148,57 @@ class Channel:
         # Upload the thumbnail
         assert resources.THUMBNAIL.is_file()
         media = MediaFileUpload(resources.THUMBNAIL.as_posix(), mimetype=resources.THUMBNAIL_MIME_TYPE)
-        thumbnail_request = youtube.thumbnails().set(videoId=broadcast_id, media_body=media)
-        self._execute_with_retry(thumbnail_request)
+        self._execute_with_retry(lambda resource: resource.thumbnails().set(videoId=broadcast_id, media_body=media))
         return broadcast_id
 
+    @cached_property
     @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)
-    def _create_resource(self) -> Resource:
-        return build(
-            "youtube", "v3", credentials=self.creds.create_oauth_credentials(self.SCOPES), cache_discovery=False
-        )
+    def _resource(self) -> Resource:
+        credentials = self.creds.create_oauth_credentials(self.SCOPES)
+        return build("youtube", "v3", credentials=credentials, cache_discovery=False)
 
-    def _get_pages(self, get_resource: Callable[[], Resource], select_key: str, **kwargs: Any) -> Iterable[Any]:  # noqa: ANN401
+    def _reset_resource(self) -> None:
+        logger.info("Resetting resource.")
+        self.__dict__.pop("_resource", None)
+
+    def _get_pages(self, select_key: str, **kwargs: Any) -> Iterable[Any]:  # noqa: ANN401
         next_page_token: str | None = None
         start_idx = 0
         page_count = 1
-        resource: Resource | None = None
         while True:
-            try:
-                if resource is None:
-                    resource = get_resource()
 
-                request = cast(
+            def get_request(resource: Resource, next_page_token: str | None = next_page_token) -> HttpRequest:
+                return cast(
                     HttpRequest,
-                    resource.list(
+                    resource.liveBroadcasts().list(
                         pageToken=next_page_token,
                         **kwargs,
                     ),
                 )
 
-                results = self._execute_with_retry(request)
-                values = cast(list[dict[str, Any]], results.get(select_key, []))
+            results = self._execute_with_retry(get_request)
+            values = cast(list[dict[str, Any]], results.get(select_key, []))
 
-                total_len = start_idx + len(values)
-                logger.debug("Page: %d (%d-%d %s)", page_count, start_idx, total_len, select_key)
+            total_len = start_idx + len(values)
+            logger.debug("Page: %d (%d-%d %s)", page_count, start_idx, total_len, select_key)
 
-                yield from values
+            yield from values
 
-                next_page_token = results.get("nextPageToken")
-                if next_page_token is None:
-                    break
+            next_page_token = results.get("nextPageToken")
+            if next_page_token is None:
+                break
 
-                start_idx = total_len
-                page_count += 1
-            except google.auth.exceptions.RefreshError:
-                logger.exception("Token failed to be refreshed", exc_info=False)
-                self.creds.invalidate_token()
-                resource = None
+            start_idx = total_len
+            page_count += 1
 
-    @staticmethod
-    @backoff.on_exception(backoff.expo, HttpError, max_tries=constants.MAX_RETRY)
-    def _execute_with_retry(request: HttpRequest) -> dict[str, Any]:
-        return request.execute()
+    @backoff.on_exception(backoff.expo, (google.auth.exceptions.RefreshError, HttpError), max_tries=constants.MAX_RETRY)
+    def _execute_with_retry(self, request_factory: Callable[[Resource], HttpRequest]) -> dict[str, Any]:
+        try:
+            return request_factory(self._resource).execute()
+        except google.auth.exceptions.RefreshError:
+            logger.exception("Token failed to be refreshed", exc_info=False)
+            self._reset_resource()
+            raise
 
     @staticmethod
     def _parse_datetime(date_string: str | None) -> datetime.datetime | None:

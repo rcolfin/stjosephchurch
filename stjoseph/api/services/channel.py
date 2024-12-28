@@ -10,12 +10,10 @@ from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import HttpRequest, MediaFileUpload
 
-from stjoseph.api import constants, models, resources, utils
+from stjoseph.api import constants, models, oauth2, resources, utils
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from stjoseph.api import oauth2
+    from collections.abc import Callable, Iterable
 
 
 logger = logging.getLogger(__name__)
@@ -34,9 +32,11 @@ class Channel:
         return youtube.channels().list(part="snippet", mine=True).execute()
 
     def broadcasts(self) -> Iterable[dict[str, Any]]:
-        youtube = self._create_resource()
+        def get_live_broadcasts() -> Resource:
+            return self._create_resource().liveBroadcasts()
+
         return self._get_pages(
-            youtube.liveBroadcasts(),
+            get_live_broadcasts,
             "items",
             part="id,snippet,status",
             broadcastStatus="upcoming",
@@ -165,12 +165,16 @@ class Channel:
             "youtube", "v3", credentials=self.creds.create_oauth_credentials(self.SCOPES), cache_discovery=False
         )
 
-    def _get_pages(self, resource: Resource, select_key: str, **kwargs: Any) -> Iterable[Any]:  # noqa: ANN401
-        try:
-            next_page_token: str | None = None
-            start_idx = 0
-            page_count = 1
-            while True:
+    def _get_pages(self, get_resource: Callable[[], Resource], select_key: str, **kwargs: Any) -> Iterable[Any]:  # noqa: ANN401
+        next_page_token: str | None = None
+        start_idx = 0
+        page_count = 1
+        resource: Resource | None = None
+        while True:
+            try:
+                if resource is None:
+                    resource = get_resource()
+
                 request = cast(
                     HttpRequest,
                     resource.list(
@@ -193,10 +197,10 @@ class Channel:
 
                 start_idx = total_len
                 page_count += 1
-        except google.auth.exceptions.RefreshError:
-            logger.exception("Token failed to be refreshed", exc_info=False)
-            self.creds.invalidate_token()
-            raise
+            except google.auth.exceptions.RefreshError:
+                logger.exception("Token failed to be refreshed", exc_info=False)
+                self.creds.invalidate_token()
+                resource = None
 
     @staticmethod
     @backoff.on_exception(backoff.expo, HttpError, max_tries=constants.MAX_RETRY)

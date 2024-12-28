@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import backoff
@@ -154,12 +155,14 @@ class Channel:
     @cached_property
     @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)
     def _resource(self) -> Resource:
+        logger.debug("Creating Resource")
         credentials = self.creds.create_oauth_credentials(self.SCOPES)
         return build("youtube", "v3", credentials=credentials, cache_discovery=False)
 
     def _reset_resource(self) -> None:
-        logger.info("Resetting resource.")
+        logger.debug("Resetting resource.")
         self.__dict__.pop("_resource", None)
+        self.creds.invalidate_token()
 
     def _get_pages(self, select_key: str, **kwargs: Any) -> Iterable[Any]:  # noqa: ANN401
         next_page_token: str | None = None
@@ -195,6 +198,11 @@ class Channel:
     def _execute_with_retry(self, request_factory: Callable[[Resource], HttpRequest]) -> dict[str, Any]:
         try:
             return request_factory(self._resource).execute()
+        except HttpError as e:
+            if e.status_code == HTTPStatus.FORBIDDEN:
+                logger.exception("Token failed to be refreshed", exc_info=False)
+                self._reset_resource()
+            raise
         except google.auth.exceptions.RefreshError:
             logger.exception("Token failed to be refreshed", exc_info=False)
             self._reset_resource()

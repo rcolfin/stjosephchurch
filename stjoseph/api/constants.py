@@ -15,6 +15,7 @@ CREDENTIALS_FILE: Final[Path] = Path(Path.cwd(), "credentials.json").resolve()
 TOKEN_FILE: Final[Path] = Path(Path.cwd(), "token.json").resolve()
 
 DATE_FMT: Final[str] = "%Y-%m-%d"
+
 DATE_TIME_FMT: Final[str] = "%Y-%m-%d %H:%M"
 
 SATURDAY_EVENING_MASS: Final[tuple[int, int]] = (17, 30)  # 5:30 PM

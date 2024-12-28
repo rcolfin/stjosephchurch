@@ -44,7 +44,7 @@ To schedule the Christ Pageant mass:
 (Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122524-Night.cfm).)
 
 ```sh
-python -m stjoseph schedule-mass '2024-12-24 16:30' --mass-date '2024-12-25' --public --type night
+python -m stjoseph schedule-mass '2024-12-24 16:00' --mass-date '2024-12-25' --schedule-end '2024-12-24 16:30' --public --type night
 ```
 
 or through the launcher...
@@ -64,5 +64,5 @@ To schedule the Christ Pageant mass:
 (Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122524-Night.cfm).)
 
 ```sh
-scripts/launch.sh schedule-mass '2024-12-24 16:30' --mass-date '2024-12-25' --public --type night
+scripts/launch.sh schedule-mass '2024-12-24 16:00' --mass-date '2024-12-25' --schedule-end '2024-12-24 16:30' --public --type night
 ```

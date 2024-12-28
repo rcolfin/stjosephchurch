@@ -83,6 +83,12 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
     help="The date of the mass to use for the contents of the liturgy",
 )
 @click.option(
+    "-e",
+    "--schedule-end",
+    type=click.DateTime([constants.DATE_TIME_FMT]),
+    help="The time when the broadcast is complete",
+)
+@click.option(
     "-t",
     "--type",
     "types",
@@ -127,6 +133,7 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
 async def schedule_mass(  # noqa: PLR0913
     ctx: click.Context,
     date: datetime.datetime,
+    schedule_end: datetime.datetime | None,
     mass_date: datetime.datetime | None,
     types: list[models.MassType] | None,
     credentials: PathLike,
@@ -139,6 +146,8 @@ async def schedule_mass(  # noqa: PLR0913
         mass_date = date
         if utils.is_saturday_pm_mass(date):
             mass_date = date + datetime.timedelta(days=1)
+            if schedule_end is None:
+                schedule_end = date + datetime.timedelta(hours=1)
             logger.info("Querying for mass on Sunday: %s", mass_date.date())
 
     creds = oauth2.CredentialsManager(credentials, token)
@@ -167,9 +176,11 @@ async def schedule_mass(  # noqa: PLR0913
     title = generators.generate_title(date)
     description = generators.generate_description(mass)
     if broadcast_id is None:
-        channel_svc.schedule_broadcast(title, description, date, is_public=public, dry_run=dry_run)
+        channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)
     else:
-        channel_svc.update_broadcast(broadcast_id, title, description, date, is_public=public, dry_run=dry_run)
+        channel_svc.update_broadcast(
+            broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
+        )
 
 
 @cli.command()
@@ -273,8 +284,11 @@ async def schedule_masses(  # noqa: PLR0913
         description = generators.generate_description(mass)
         if force:
             broadcast_id = scheduled_dates.get(utils.to_saturday_mass(mass.date).astimezone(datetime.UTC))
+            schedule_end = date + datetime.timedelta(hours=1)
             if broadcast_id is not None:
-                channel_svc.update_broadcast(broadcast_id, title, description, date, is_public=public, dry_run=dry_run)
+                channel_svc.update_broadcast(
+                    broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
+                )
                 continue
 
-        channel_svc.schedule_broadcast(title, description, date, is_public=public, dry_run=dry_run)
+        channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)

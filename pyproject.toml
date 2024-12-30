@@ -29,7 +29,7 @@ python-dateutil = "^2.9.0.post0"
 pytz = "^2024.2"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.11.2"
+mypy = "^1.14.1"
 ruff = "^0.8.3"
 pytest = "^8.3.3"
 pytest-cov = "^6.0.0"

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 _TODAY: Final[str] = USCCB.today().strftime(constants.DATE_FMT)
 _TYPES: Final[list[str]] = [t.name for t in models.MassType]
+_CHRISTMAS_PAGENT: Final[str] = utils.get_next_christmas_pageant().strftime(constants.DATE_TIME_FMT)
 
 
 def _get_mass_types(ctx: click.Context, param: click.Option, value: tuple[str, ...]) -> list[models.MassType] | None:
@@ -72,6 +73,46 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
     creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
     channel_svc.delete_broadcast(broadcast_id)
+
+
+@cli.command()
+@click.option(
+    "-c",
+    "--credentials",
+    type=click.Path(exists=True, dir_okay=False),
+    default=constants.CREDENTIALS_FILE,
+    help="The path to the credentials file",
+)
+@click.option(
+    "-t",
+    "--token",
+    type=click.Path(exists=False, dir_okay=False),
+    default=constants.TOKEN_FILE,
+    help="The path to the token file",
+)
+@click.option(
+    "--dry-run",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether this is a dry-run",
+)
+def delete_duplicate_broadcasts(credentials: PathLike, token: PathLike, dry_run: bool) -> None:
+    creds = oauth2.CredentialsManager(credentials, token)
+    channel_svc = services.Channel(creds)
+    duplicate_broadcasts = channel_svc.get_duplicated_schedules_dates()
+    if not duplicate_broadcasts:
+        logger.info("No duplicate broadcasts found.")
+        return
+
+    for date, broadcast_ids in duplicate_broadcasts.items():
+        logger.info(
+            "Date: %s, has the following duplicated broadcast ids: %s",
+            date.strftime("%B %d, %Y - %-I:%M %p"),
+            sorted(broadcast_ids),
+        )
+        if dry_run is False:
+            for broadcast_id in broadcast_ids:
+                channel_svc.delete_broadcast(broadcast_id)
 
 
 @cli.command()
@@ -146,9 +187,10 @@ async def schedule_mass(  # noqa: PLR0913
         mass_date = date
         if utils.is_saturday_pm_mass(date):
             mass_date = date + datetime.timedelta(days=1)
-            if schedule_end is None:
-                schedule_end = date + datetime.timedelta(hours=1)
             logger.info("Querying for mass on Sunday: %s", mass_date.date())
+
+    if schedule_end is None:
+        schedule_end = date + datetime.timedelta(hours=1)
 
     creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
@@ -158,7 +200,7 @@ async def schedule_mass(  # noqa: PLR0913
     broadcast_id = scheduled_dates.get(date.astimezone(datetime.UTC))
     if broadcast_id is not None:
         if not force:
-            logger.warning("%s is already scheduled.", date)
+            logger.warning("%s is already scheduled under %s.", date, broadcast_id)
             return
 
         logger.info("%s is already scheduled under %s.", date, broadcast_id)
@@ -173,7 +215,7 @@ async def schedule_mass(  # noqa: PLR0913
         return
 
     # Generate title/description and publish:
-    title = generators.generate_title(date)
+    title = generators.generate_title(date, mass.title)
     description = generators.generate_description(mass)
     if broadcast_id is None:
         channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)
@@ -241,7 +283,7 @@ async def schedule_masses(  # noqa: PLR0913
     channel_svc = services.Channel(creds)
 
     start_date = start.date()
-    end_date = utils.add_months(start_date, 1) if end is None else end.date()
+    end_date = None if end is None else end.date()
 
     # Check if this mass is already scheduled:
     scheduled_dates = channel_svc.get_scheduled_dates()
@@ -261,17 +303,13 @@ async def schedule_masses(  # noqa: PLR0913
             logger.info("There are no new dates to schedule.")
             return
 
-        logger.info("Querying for mass for %s", list(map(str, dates)))
+        logger.info("Querying for masses for the following dates: [%s]", ", ".join(list(map(str, dates))))
         masses: list[Mass] = []
         missing = 0
-        for task in asyncio.as_completed([usccb.get_mass_from_date(dt, types) for dt in dates]):
-            mass = await task
-            if mass is not None:
-                masses.append(mass)
-            else:
-                missing += 1
-
-    logger.info("Got %d masses", len(masses))
+        tasks = [usccb.get_mass_from_date(dt, types) for dt in dates]
+        responses = await asyncio.gather(*tasks)
+        masses = [m for m in responses if m]
+        missing = len(tasks) - len(masses)
 
     if missing:
         logger.warning("There are %d missing", missing)
@@ -280,11 +318,11 @@ async def schedule_masses(  # noqa: PLR0913
         # Generate title/description and publish:
         assert mass.date is not None
         date = utils.to_saturday_mass(mass.date)
-        title = generators.generate_title(date)
+        schedule_end = date + datetime.timedelta(hours=1)
+        title = generators.generate_title(date, mass.title)
         description = generators.generate_description(mass)
         if force:
             broadcast_id = scheduled_dates.get(utils.to_saturday_mass(mass.date).astimezone(datetime.UTC))
-            schedule_end = date + datetime.timedelta(hours=1)
             if broadcast_id is not None:
                 channel_svc.update_broadcast(
                     broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
@@ -292,3 +330,86 @@ async def schedule_masses(  # noqa: PLR0913
                 continue
 
         channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)
+
+
+@cli.command()
+@click.argument("date", type=click.DateTime([constants.DATE_TIME_FMT]), default=_CHRISTMAS_PAGENT)
+@click.option(
+    "-e",
+    "--schedule-end",
+    type=click.DateTime([constants.DATE_TIME_FMT]),
+    help="The time when the broadcast is complete",
+)
+@click.option(
+    "-c",
+    "--credentials",
+    type=click.Path(exists=True, dir_okay=False),
+    default=constants.CREDENTIALS_FILE,
+    help="The path to the credentials file",
+)
+@click.option(
+    "-t",
+    "--token",
+    type=click.Path(exists=False, dir_okay=False),
+    default=constants.TOKEN_FILE,
+    help="The path to the token file",
+)
+@click.option(
+    "--public",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether this is a public video",
+)
+@click.option(
+    "--dry-run",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether this is a dry-run",
+)
+@click.option(
+    "--force",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether to overwrite even if the mass exists.",
+)
+async def schedule_christmas_pageant(  # noqa: PLR0913
+    date: datetime.datetime,
+    schedule_end: datetime.datetime | None,
+    credentials: PathLike,
+    token: PathLike,
+    public: bool,
+    dry_run: bool,
+    force: bool,
+) -> None:
+    creds = oauth2.CredentialsManager(credentials, token)
+    channel_svc = services.Channel(creds)
+
+    if schedule_end is None:
+        schedule_end = date + datetime.timedelta(minutes=30)
+    else:
+        schedule_end = schedule_end.astimezone(datetime.UTC)
+
+    # Check if this is already scheduled:
+    scheduled_dates = channel_svc.get_scheduled_dates()
+    if date.date() < USCCB.today():
+        logger.error("You cannot schedule in the past.")
+        return
+
+    broadcast_id = scheduled_dates.get(date.astimezone(datetime.UTC))
+    if broadcast_id is not None:
+        if force is False:
+            logger.warning("%s is already scheduled under %s.", date, broadcast_id)
+            return
+
+        logger.info("%s is already scheduled under %s.", date, broadcast_id)
+
+    title = generators.generate_christmas_pageant(date)
+    description = generators.generate_description_christmas_pageant()
+    if force:
+        if broadcast_id is not None:
+            channel_svc.update_broadcast(
+                broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
+            )
+            return
+
+    channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)

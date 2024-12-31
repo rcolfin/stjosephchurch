@@ -45,7 +45,27 @@ class Channel:
 
     def get_scheduled_dates(self) -> dict[datetime.datetime, str]:
         """Gets a list of the upcoming scheduled dates to id."""
-        return {x.scheduled_start: x.id for x in self.list_scheduled_livestreams() if x.scheduled_start is not None}
+        results: dict[datetime.datetime, str] = {}
+        for sch in self.list_scheduled_livestreams():
+            if sch.scheduled_start is None:
+                continue
+            if sch.scheduled_start in results:
+                logger.warning("Duplicate scheduled broadcast on %s.", sch.scheduled_start)
+
+            results[sch.scheduled_start] = sch.id
+        return results
+
+    def get_duplicated_schedules_dates(self) -> dict[datetime.datetime, list[str]]:
+        """Gets a map of all the duplicated scheduled streams."""
+        results: dict[datetime.datetime, list[str]] = {}
+        for sch in self.list_scheduled_livestreams():
+            if sch.scheduled_start is None:
+                continue
+            if sch.scheduled_start in results:
+                results[sch.scheduled_start].append(sch.id)
+            else:
+                results[sch.scheduled_start] = [sch.id]
+        return {k: v for k, v in results.items() if len(v) > 1}
 
     def delete_broadcast(self, broadcast_id: str) -> None:
         self._execute_with_retry(lambda resource: resource.liveBroadcasts().delete(id=broadcast_id))
@@ -60,7 +80,7 @@ class Channel:
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
-        return self._upsert_broadcast(
+        broadcast_id = self._upsert_broadcast(
             None,
             title,
             description,
@@ -69,6 +89,19 @@ class Channel:
             is_public=is_public,
             dry_run=dry_run,
         )
+
+        # Upload the thumbnail
+        assert resources.THUMBNAIL.is_file()
+        media = MediaFileUpload(resources.THUMBNAIL.as_posix(), mimetype=resources.THUMBNAIL_MIME_TYPE)
+        self._execute_with_retry(lambda resource: resource.thumbnails().set(videoId=broadcast_id, media_body=media))
+
+        logger.info(
+            "Successfully scheduled ID: %s, url: %s",
+            broadcast_id,
+            constants.LIVE_STREAMING_URL_FMT.format(VIDEO_ID=broadcast_id),
+        )
+
+        return broadcast_id
 
     def update_broadcast(  # noqa: PLR0913
         self,
@@ -80,7 +113,7 @@ class Channel:
         is_public: bool = False,
         dry_run: bool = False,
     ) -> str:
-        return self._upsert_broadcast(
+        broadcast_id = self._upsert_broadcast(
             broadcast_id,
             title,
             description,
@@ -89,6 +122,12 @@ class Channel:
             is_public=is_public,
             dry_run=dry_run,
         )
+        logger.info(
+            "Successfully updated scheduled ID: %s, url: %s",
+            broadcast_id,
+            constants.LIVE_STREAMING_URL_FMT.format(VIDEO_ID=broadcast_id),
+        )
+        return broadcast_id
 
     def _upsert_broadcast(  # noqa: PLR0913
         self,
@@ -106,17 +145,18 @@ class Channel:
             "snippet": {
                 "title": title,
                 "description": description,
-                "scheduledStartTime": utils.to_gcloude_datetime(scheduled_start_time),
+                "scheduledStartTime": utils.to_gcloud_datetime(scheduled_start_time),
             },
             "status": {"privacyStatus": privacy_status, "selfDeclaredMadeForKids": True},
         }
 
         if scheduled_end_time is not None:
-            body["snippet"]["scheduledEndTime"] = utils.to_gcloude_datetime(scheduled_end_time)
+            body["snippet"]["scheduledEndTime"] = utils.to_gcloud_datetime(scheduled_end_time)
 
         if broadcast_id is not None:
             body["id"] = broadcast_id
             logger.info("Updating mass%s", " [DRY-RUN]" if dry_run else "")
+            logger.info("ID: %s", broadcast_id)
 
         else:
             logger.info("Scheduling mass%s", " [DRY-RUN]" if dry_run else "")
@@ -132,25 +172,22 @@ class Channel:
         if dry_run:
             return constants.NO_OP
 
-        broadcast_response = self._execute_with_retry(
-            lambda resource: resource.liveBroadcasts().insert(
-                part="snippet,status",
-                body=body,
+        if broadcast_id is None:
+            broadcast_response = self._execute_with_retry(
+                lambda resource: resource.liveBroadcasts().insert(
+                    part="snippet,status",
+                    body=body,
+                )
             )
-        )
+        else:
+            broadcast_response = self._execute_with_retry(
+                lambda resource: resource.liveBroadcasts().update(
+                    part="snippet,status",
+                    body=body,
+                )
+            )
 
-        broadcast_id = cast(str, broadcast_response["id"])
-        logger.info(
-            "Successfully scheduled ID: %s, url: %s",
-            broadcast_id,
-            constants.LIVE_STREAMING_URL_FMT.format(VIDEO_ID=broadcast_id),
-        )
-
-        # Upload the thumbnail
-        assert resources.THUMBNAIL.is_file()
-        media = MediaFileUpload(resources.THUMBNAIL.as_posix(), mimetype=resources.THUMBNAIL_MIME_TYPE)
-        self._execute_with_retry(lambda resource: resource.thumbnails().set(videoId=broadcast_id, media_body=media))
-        return broadcast_id
+        return cast(str, broadcast_response["id"])
 
     @cached_property
     @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)

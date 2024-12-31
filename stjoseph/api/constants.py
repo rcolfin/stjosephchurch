@@ -20,6 +20,9 @@ DATE_TIME_FMT: Final[str] = "%Y-%m-%d %H:%M"
 
 SATURDAY_EVENING_MASS: Final[tuple[int, int]] = (17, 30)  # 5:30 PM
 
+CHRISTMAS_PAGEANT_TIME: Final[tuple[int, int]] = (16, 00)  # 4 PM
+CHRISTMAS_PAGEANT_DATE: Final[tuple[int, int]] = (12, 24)  # 12/24
+
 NO_OP: Final[str] = "NOOP"
 
 LIVE_STREAMING_URL_FMT: Final[str] = "https://studio.youtube.com/video/{VIDEO_ID}/livestreaming"

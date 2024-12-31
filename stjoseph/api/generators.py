@@ -17,8 +17,18 @@ Please consider giving this video a like, and subscribing to the channel. Thanks
 """  # noqa: E501
 
 
+def _create_jinja_envirionment() -> jinja2.Environment:
+    return jinja2.Environment(autoescape=False)  # noqa: S701
+
+
+def generate_description_christmas_pageant() -> str:
+    environment = _create_jinja_envirionment()
+    template = environment.from_string(DESCRIPTION)
+    return template.render()
+
+
 def generate_description(mass: Mass) -> str:
-    environment = jinja2.Environment(autoescape=True)
+    environment = _create_jinja_envirionment()
     template = environment.from_string(DESCRIPTION)
     text = template.render(text=_get_mass_text(mass), url=mass.url)
     if len(text) <= constants.MAX_DESCRIPTION_LENGTH:
@@ -32,8 +42,12 @@ def generate_description(mass: Mass) -> str:
     return template.render(url=mass.url)
 
 
-def generate_title(mass_date: datetime.datetime) -> str:
-    return f"Mass {mass_date:%B %d, %Y - %-I:%M %p}"
+def generate_christmas_pageant(mass_date: datetime.datetime) -> str:
+    return f"Chrismas Pageant {mass_date:%B %-d, %Y - %-I:%M %p}"
+
+
+def generate_title(mass_date: datetime.datetime, title: str) -> str:
+    return f"Mass {mass_date:%B %-d, %Y - %-I:%M %p}: {title}"
 
 
 def _get_mass_text(mass: Mass) -> str:

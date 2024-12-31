@@ -247,13 +247,13 @@ files = [
 
 [[package]]
 name = "catholic-mass-readings"
-version = "0.4.2"
+version = "0.4.3"
 description = "Provides an API for scraping the web page from https://bible.usccb.org/bible/readings/ to get the readings"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "catholic_mass_readings-0.4.2-py3-none-any.whl", hash = "sha256:0716b294327f4f9cff60d858a6fad0c635a9cf47d221acffbb26e1c077c681ae"},
-    {file = "catholic_mass_readings-0.4.2.tar.gz", hash = "sha256:050335a4e8804e6923a0488f59bfccdc56168ddc931a0b7b83addc990a987676"},
+    {file = "catholic_mass_readings-0.4.3-py3-none-any.whl", hash = "sha256:288094f776d662c0263a888fdd527338f69b4686944954e3e7784fc14c4c30ff"},
+    {file = "catholic_mass_readings-0.4.3.tar.gz", hash = "sha256:45b5371c97ff3c9f441d7407c914b8176b94260f7690b5ee58a75af1ed41addb"},
 ]
 
 [package.dependencies]
@@ -1602,4 +1602,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "a42ec3e74f24e1aa829650c47fe2aa594c48f173ca0eef8daa0f50d2732978d5"
+content-hash = "06e12eaab76b7e84bc63e7e0d27fd61ff2cba5a8a8c5b8e6166b08a094fc91a5"

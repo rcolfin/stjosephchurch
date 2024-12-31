@@ -12,7 +12,7 @@ def parse_gcloud_datetime(date_string: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_string, constants.GCLOUD_DATE_FMT).replace(tzinfo=datetime.UTC)
 
 
-def to_gcloude_datetime(dt: datetime.datetime) -> str:
+def to_gcloud_datetime(dt: datetime.datetime) -> str:
     return dt.astimezone(datetime.UTC).strftime(constants.GCLOUD_DATE_FMT)
 
 
@@ -60,4 +60,21 @@ def add_months(dt: datetime.date, months_to_add: int) -> datetime.date:
         dt.year + (dt.month + months_to_add - 1) // 12,
         (dt.month + months_to_add - 1) % 12 + 1,
         dt.day,
+    )
+
+
+def get_next_christmas_pageant() -> datetime.datetime:
+    now = datetime.datetime.now(tz=constants.DEFAULT_TIMEZONE)
+    year = now.year
+    if now.month == constants.CHRISTMAS_PAGEANT_DATE[0] and now.day > constants.CHRISTMAS_PAGEANT_DATE[1]:
+        year += 1
+
+    return datetime.datetime(
+        year,
+        constants.CHRISTMAS_PAGEANT_DATE[0],
+        constants.CHRISTMAS_PAGEANT_DATE[1],
+        constants.CHRISTMAS_PAGEANT_TIME[0],
+        constants.CHRISTMAS_PAGEANT_TIME[1],
+        0,
+        tzinfo=constants.DEFAULT_TIMEZONE,
     )

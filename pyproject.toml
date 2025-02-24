@@ -30,7 +30,7 @@ pytz = "^2024.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"
-ruff = "^0.9.6"
+ruff = "^0.9.7"
 pytest = "^8.3.3"
 pytest-cov = "^6.0.0"
 pytest-ruff = "^0.4.1"

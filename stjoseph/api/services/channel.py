@@ -187,7 +187,7 @@ class Channel:
                 )
             )
 
-        return cast(str, broadcast_response["id"])
+        return cast("str", broadcast_response["id"])
 
     @cached_property
     @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)
@@ -209,7 +209,7 @@ class Channel:
 
             def get_request(resource: Resource, next_page_token: str | None = next_page_token) -> HttpRequest:
                 return cast(
-                    HttpRequest,
+                    "HttpRequest",
                     resource.liveBroadcasts().list(
                         pageToken=next_page_token,
                         **kwargs,
@@ -217,7 +217,7 @@ class Channel:
                 )
 
             results = self._execute_with_retry(get_request)
-            values = cast(list[dict[str, Any]], results.get(select_key, []))
+            values = cast("list[dict[str, Any]]", results.get(select_key, []))
 
             total_len = start_idx + len(values)
             logger.debug("Page: %d (%d-%d %s)", page_count, start_idx, total_len, select_key)

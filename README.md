@@ -12,7 +12,7 @@ To reduce the manual steps involved with setting up a Scheduled Live Stream whic
 
 ### Setup Python Environment:
 
-Run [scripts/console.sh](../scripts/console.sh) poetry install
+Run [scripts/console.sh](../scripts/console.sh)
 
 ### If you need to relock:
 
@@ -20,7 +20,7 @@ Run [scripts/lock.sh](../scripts/lock.sh)
 
 ### Run code
 
-Run [scripts/console.sh](../scripts/console.sh) poetry run python -m stjoseph
+Run [scripts/console.sh](../scripts/console.sh) uv run python -m stjoseph
 
 
 ## API Usage:

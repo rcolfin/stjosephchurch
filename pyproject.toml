@@ -33,7 +33,7 @@ dependencies = [
     "catholic-mass-readings<1.0.0,>=0.4.3",
     "jinja2<4.0.0,>=3.1.5",
     "python-dateutil<3.0.0.0,>=2.9.0.post0",
-    "pytz<2025.0,>=2024.2",
+    "pytz>=2024.2,<2026.0",
 ]
 
 [dependency-groups]

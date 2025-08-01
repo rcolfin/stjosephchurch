@@ -43,7 +43,7 @@ dev = [
     "pytest<9.0.0,>=8.3.3",
     "pytest-cov<7.0.0,>=6.0.0",
     "pytest-ruff<1.0.0,>=0.4.1",
-    "pytest-mypy<1.0.0,>=0.10.3",
+    "pytest-mypy>=0.10.3,<2.0.0",
     "types-pytz<2026.0.0.0,>=2025.1.0.20250204",
     "types-python-dateutil<3.0.0.0,>=2.9.0.20241206",
 ]

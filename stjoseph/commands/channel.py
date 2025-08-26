@@ -405,11 +405,11 @@ async def schedule_christmas_pageant(  # noqa: PLR0913
 
     title = generators.generate_christmas_pageant(date)
     description = generators.generate_description_christmas_pageant()
-    if force:
-        if broadcast_id is not None:
-            channel_svc.update_broadcast(
-                broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
-            )
-            return
+    if force and broadcast_id is not None:
+        channel_svc.update_broadcast(
+            broadcast_id, title, description, date, schedule_end, is_public=public, dry_run=dry_run
+        )
+
+        return
 
     channel_svc.schedule_broadcast(title, description, date, schedule_end, is_public=public, dry_run=dry_run)

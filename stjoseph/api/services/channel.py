@@ -32,16 +32,33 @@ class Channel:
     def get_channels(self) -> dict[str, Any]:
         return self._execute_with_retry(lambda resource: resource.channels().list(part="snippet", mine=True))
 
-    def broadcasts(self) -> Iterable[dict[str, Any]]:
+    def broadcasts(
+        self,
+        broadcast_status: models.BroadcastStatus,
+        broadcast_type: models.BroadcastType,
+    ) -> Iterable[dict[str, Any]]:
         return self._get_pages(
             "items",
             part="id,snippet,status",
-            broadcastStatus="upcoming",
-            broadcastType="event",
+            broadcastStatus=broadcast_status.value,
+            broadcastType=broadcast_type.value,
         )
 
     def list_scheduled_livestreams(self) -> Iterable[models.LiveStream]:
-        return map(self._create_live_stream_from_item, self.broadcasts())
+        return map(
+            self._create_live_stream_from_item,
+            self.broadcasts(models.BroadcastStatus.UPCOMING, models.BroadcastType.EVENT),
+        )
+
+    def list_completed_livestreams(self) -> Iterable[models.LiveStream]:
+        return map(
+            self._create_live_stream_from_item,
+            self.broadcasts(models.BroadcastStatus.COMPLETED, models.BroadcastType.EVENT),
+        )
+
+    def list_eligible_for_deletion(self) -> Iterable[models.LiveStream]:
+        """Gets all the scheduled streams that did not broadcast or were too short and can be deleted."""
+        return (sch for sch in self.list_completed_livestreams() if sch.is_eligible_for_deletion())
 
     def get_scheduled_dates(self) -> dict[datetime.datetime, str]:
         """Gets a list of the upcoming scheduled dates to id."""
@@ -263,7 +280,12 @@ class Channel:
     def _create_live_stream_from_item(item: dict[str, Any]) -> models.LiveStream:
         snippet = item["snippet"]
         scheduled_start = Channel._parse_datetime(snippet.get("scheduledStartTime"))
-        return models.LiveStream(item["id"], snippet["title"], snippet["description"], scheduled_start)
+        published = Channel._parse_datetime(snippet.get("publishedAt"))
+        actual_start = Channel._parse_datetime(snippet.get("actualStartTime"))
+        actual_end = Channel._parse_datetime(snippet.get("actualEndTime"))
+        return models.LiveStream(
+            item["id"], snippet["title"], snippet["description"], published, scheduled_start, actual_start, actual_end
+        )
 
     @staticmethod
     def _assert_description_len(description: str) -> None:

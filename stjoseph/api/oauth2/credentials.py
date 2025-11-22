@@ -5,11 +5,11 @@ from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-import backoff
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from stjoseph.api import constants
 
@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
+
+
+def _is_refresh_exception(e: BaseException) -> bool:
+    """Returns True if the exception is a RefreshError exception."""
+    return isinstance(e, RefreshError)
 
 
 class CredentialsManager:
@@ -49,7 +54,11 @@ class CredentialsManager:
         token_file_ctime = self._token_file.stat().st_ctime if self._token_file.exists() else None
         return token_file_ctime != self.__token_file_ctime
 
-    @backoff.on_exception(backoff.expo, RefreshError, max_tries=constants.MAX_RETRY)
+    @retry(
+        retry=retry_if_exception(_is_refresh_exception),
+        wait=wait_exponential(),
+        stop=stop_after_attempt(constants.MAX_RETRIES),
+    )
     def create_oauth_credentials(self, scopes: list[str]) -> Credentials:
         """Creates an instance of OAuth 2.0 Credentials"""
         creds = None

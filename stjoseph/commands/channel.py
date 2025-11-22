@@ -211,7 +211,7 @@ async def schedule_mass(  # noqa: PLR0913
 
     if not mass:
         logger.error("Failed to find a mass on %s", mass_date)
-        ctx.exit(1)
+        await ctx.aexit(1)
         return
 
     # Generate title/description and publish:

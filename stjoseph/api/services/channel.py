@@ -5,11 +5,11 @@ from functools import cached_property
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Final, cast
 
-import backoff
 import google.auth.exceptions
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import HttpRequest, MediaFileUpload
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from stjoseph.api import constants, models, oauth2, resources, utils
 
@@ -190,7 +190,11 @@ class Channel:
         return cast("str", broadcast_response["id"])
 
     @cached_property
-    @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)
+    @retry(
+        retry=retry_if_exception(lambda exception: isinstance(exception, AttributeError)),
+        wait=wait_exponential(),
+        stop=stop_after_attempt(constants.MAX_RETRIES),
+    )
     def _resource(self) -> Resource:
         logger.debug("Creating Resource")
         credentials = self.creds.create_oauth_credentials(self.SCOPES)
@@ -231,7 +235,13 @@ class Channel:
             start_idx = total_len
             page_count += 1
 
-    @backoff.on_exception(backoff.expo, (google.auth.exceptions.RefreshError, HttpError), max_tries=constants.MAX_RETRY)
+    @retry(
+        retry=retry_if_exception(
+            lambda exception: isinstance(exception, (google.auth.exceptions.RefreshError, HttpError))
+        ),
+        wait=wait_exponential(),
+        stop=stop_after_attempt(constants.MAX_RETRIES),
+    )
     def _execute_with_retry(self, request_factory: Callable[[Resource], HttpRequest]) -> dict[str, Any]:
         try:
             return request_factory(self._resource).execute()

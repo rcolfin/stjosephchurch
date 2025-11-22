@@ -2,11 +2,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "Python Debugger (list-mass-schedules)",
             "type": "debugpy",
             "request": "launch",
             "module": "stjoseph",
-            "args": ["list-mass-schedules"]
+            "args": [
+                "list-mass-schedules"
+            ]
+        },
+        {
+            "name": "Python Debugger (list-past-mass-schedules)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "stjoseph",
+            "args": [
+                "list-past-mass-schedules"
+            ]
         }
     ]
 }

@@ -58,8 +58,20 @@ To schedule the Christ Pageant mass:
 (Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122524-Night.cfm).)
 
 ```sh
-python -m stjoseph schedule-mass $(date '+%Y-12-24 16:30') --mass-date $(date '+%Y-12-25') --schedule-end $(date '+%Y-12-24 17:30') --public --type night
+python -m stjoseph schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type night
 ```
+
+To list masses that were scheduled but for whatever reason didn't air or were cut off after a short amount of time (under 15 minutes), then these are eligible for deletion:
+
+```sh
+ python -m stjoseph list-eligible-for-deletion
+ ```
+
+ To actually remove them:
+
+```sh
+ python -m stjoseph delete-eligible --no-dry-run
+ ```
 
 or through the launcher...
 
@@ -70,7 +82,7 @@ scripts/launch.sh schedule-mass '2024-12-21 17:30' --public
 To schedule Sunday masses a month in advance:
 
 ```sh
-scripts/launch.sh schedule-masses --public --end $(date -d "+1 month" +%Y-%m-%d)
+scripts/launch.sh schedule-masses --public --end "$(date -d '+1 month' +%Y-%m-%d)"
 ```
 
 To schedule all Sunday masses up to a year:
@@ -84,7 +96,7 @@ To schedule the Christ Pageant:
 (Schedules the Christmas Pageant at 4:00 PM.)
 
 ```sh
-scripts/launch.sh schedule-christmas-pageant $(date -d "+1 month" '+%Y-12-24 16:00') --schedule-end $(date -d "+1 month" '+%Y-12-24 16:30') --public
+scripts/launch.sh schedule-christmas-pageant "$(date -d "+1 month" '+%Y-12-24 16:00')" --schedule-end "$(date -d '+1 month' +%Y-12-24 16:30)" --public
 ```
 
 To schedule the Christ Pageant mass:
@@ -92,5 +104,5 @@ To schedule the Christ Pageant mass:
 (Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122524-Night.cfm).)
 
 ```sh
-scripts/launch.sh schedule-mass $(date '+%Y-12-24 16:30') --mass-date $(date '+%Y-12-25') --schedule-end $(date '+%Y-12-24 17:30') --public --type night
+scripts/launch.sh schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type night
 ```

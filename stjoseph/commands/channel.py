@@ -51,6 +51,94 @@ def list_mass_schedules(credentials: PathLike, token: PathLike) -> None:
 
 
 @cli.command()
+@click.option(
+    "-c",
+    "--credentials",
+    type=click.Path(exists=True, dir_okay=False),
+    default=constants.CREDENTIALS_FILE,
+    help="The path to the credentials file",
+)
+@click.option(
+    "-t",
+    "--token",
+    type=click.Path(exists=False, dir_okay=False),
+    default=constants.TOKEN_FILE,
+    help="The path to the token file",
+)
+def list_past_mass_schedules(credentials: PathLike, token: PathLike) -> None:
+    creds = oauth2.CredentialsManager(credentials, token)
+    channel_svc = services.Channel(creds)
+    streams = channel_svc.list_completed_livestreams()
+    for stream in streams:
+        print(stream)  # noqa: T201
+
+
+@cli.command()
+@click.option(
+    "-c",
+    "--credentials",
+    type=click.Path(exists=True, dir_okay=False),
+    default=constants.CREDENTIALS_FILE,
+    help="The path to the credentials file",
+)
+@click.option(
+    "-t",
+    "--token",
+    type=click.Path(exists=False, dir_okay=False),
+    default=constants.TOKEN_FILE,
+    help="The path to the token file",
+)
+def list_eligible_for_deletion(credentials: PathLike, token: PathLike) -> None:
+    creds = oauth2.CredentialsManager(credentials, token)
+    channel_svc = services.Channel(creds)
+    streams = channel_svc.list_eligible_for_deletion()
+    any_eligible_for_deletion = False
+    for stream in streams:
+        any_eligible_for_deletion = True
+        print(stream)  # noqa: T201
+    if not any_eligible_for_deletion:
+        logger.info("No eligible broadcasts found.")
+        return
+
+
+@cli.command()
+@click.option(
+    "-c",
+    "--credentials",
+    type=click.Path(exists=True, dir_okay=False),
+    default=constants.CREDENTIALS_FILE,
+    help="The path to the credentials file",
+)
+@click.option(
+    "-t",
+    "--token",
+    type=click.Path(exists=False, dir_okay=False),
+    default=constants.TOKEN_FILE,
+    help="The path to the token file",
+)
+@click.option(
+    "--dry-run",
+    type=bool,
+    is_flag=True,
+    help="Flag indicating whether this is a dry-run",
+)
+def delete_eligible(credentials: PathLike, token: PathLike, dry_run: bool) -> None:
+    creds = oauth2.CredentialsManager(credentials, token)
+    channel_svc = services.Channel(creds)
+    streams = channel_svc.list_eligible_for_deletion()
+    any_eligible_for_deletion = False
+    for stream in streams:
+        any_eligible_for_deletion = True
+        if dry_run is False:
+            channel_svc.delete_broadcast(stream.id)
+        else:
+            print(stream)  # noqa: T201
+    if not any_eligible_for_deletion:
+        logger.info("No eligible broadcasts found.")
+        return
+
+
+@cli.command()
 @click.argument(
     "broadcast_id",
     type=str,
@@ -211,7 +299,7 @@ async def schedule_mass(  # noqa: PLR0913
 
     if not mass:
         logger.error("Failed to find a mass on %s", mass_date)
-        ctx.exit(1)
+        await ctx.aexit(1)
         return
 
     # Generate title/description and publish:

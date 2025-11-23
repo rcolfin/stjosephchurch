@@ -4,7 +4,7 @@ from typing import Final
 
 import pytz
 
-MAX_RETRY: Final[int] = 2
+MAX_RETRIES: Final[int] = 2
 
 MAX_FIELD_LEN: Final[int] = 25
 

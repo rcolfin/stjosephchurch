@@ -5,11 +5,11 @@ from functools import cached_property
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Final, cast
 
-import backoff
 import google.auth.exceptions
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import HttpRequest, MediaFileUpload
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from stjoseph.api import constants, models, oauth2, resources, utils
 
@@ -32,16 +32,33 @@ class Channel:
     def get_channels(self) -> dict[str, Any]:
         return self._execute_with_retry(lambda resource: resource.channels().list(part="snippet", mine=True))
 
-    def broadcasts(self) -> Iterable[dict[str, Any]]:
+    def broadcasts(
+        self,
+        broadcast_status: models.BroadcastStatus,
+        broadcast_type: models.BroadcastType,
+    ) -> Iterable[dict[str, Any]]:
         return self._get_pages(
             "items",
             part="id,snippet,status",
-            broadcastStatus="upcoming",
-            broadcastType="event",
+            broadcastStatus=broadcast_status.value,
+            broadcastType=broadcast_type.value,
         )
 
     def list_scheduled_livestreams(self) -> Iterable[models.LiveStream]:
-        return map(self._create_live_stream_from_item, self.broadcasts())
+        return map(
+            self._create_live_stream_from_item,
+            self.broadcasts(models.BroadcastStatus.UPCOMING, models.BroadcastType.EVENT),
+        )
+
+    def list_completed_livestreams(self) -> Iterable[models.LiveStream]:
+        return map(
+            self._create_live_stream_from_item,
+            self.broadcasts(models.BroadcastStatus.COMPLETED, models.BroadcastType.EVENT),
+        )
+
+    def list_eligible_for_deletion(self) -> Iterable[models.LiveStream]:
+        """Gets all the scheduled streams that did not broadcast or were too short and can be deleted."""
+        return (sch for sch in self.list_completed_livestreams() if sch.is_eligible_for_deletion())
 
     def get_scheduled_dates(self) -> dict[datetime.datetime, str]:
         """Gets a list of the upcoming scheduled dates to id."""
@@ -190,7 +207,11 @@ class Channel:
         return cast("str", broadcast_response["id"])
 
     @cached_property
-    @backoff.on_exception(backoff.expo, AttributeError, max_tries=constants.MAX_RETRY)
+    @retry(
+        retry=retry_if_exception(lambda exception: isinstance(exception, AttributeError)),
+        wait=wait_exponential(),
+        stop=stop_after_attempt(constants.MAX_RETRIES),
+    )
     def _resource(self) -> Resource:
         logger.debug("Creating Resource")
         credentials = self.creds.create_oauth_credentials(self.SCOPES)
@@ -231,7 +252,13 @@ class Channel:
             start_idx = total_len
             page_count += 1
 
-    @backoff.on_exception(backoff.expo, (google.auth.exceptions.RefreshError, HttpError), max_tries=constants.MAX_RETRY)
+    @retry(
+        retry=retry_if_exception(
+            lambda exception: isinstance(exception, (google.auth.exceptions.RefreshError, HttpError))
+        ),
+        wait=wait_exponential(),
+        stop=stop_after_attempt(constants.MAX_RETRIES),
+    )
     def _execute_with_retry(self, request_factory: Callable[[Resource], HttpRequest]) -> dict[str, Any]:
         try:
             return request_factory(self._resource).execute()
@@ -253,7 +280,12 @@ class Channel:
     def _create_live_stream_from_item(item: dict[str, Any]) -> models.LiveStream:
         snippet = item["snippet"]
         scheduled_start = Channel._parse_datetime(snippet.get("scheduledStartTime"))
-        return models.LiveStream(item["id"], snippet["title"], snippet["description"], scheduled_start)
+        published = Channel._parse_datetime(snippet.get("publishedAt"))
+        actual_start = Channel._parse_datetime(snippet.get("actualStartTime"))
+        actual_end = Channel._parse_datetime(snippet.get("actualEndTime"))
+        return models.LiveStream(
+            item["id"], snippet["title"], snippet["description"], published, scheduled_start, actual_start, actual_end
+        )
 
     @staticmethod
     def _assert_description_len(description: str) -> None:

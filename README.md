@@ -101,8 +101,8 @@ scripts/launch.sh schedule-christmas-pageant "$(date -d "+1 month" '+%Y-12-24 16
 
 To schedule the Christ Pageant mass:
 
-(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122524-Night.cfm).)
+(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Vigil Mass](https://bible.usccb.org/bible/readings/122524-vigil.cfm).)
 
 ```sh
-scripts/launch.sh schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type night
+scripts/launch.sh schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type vigil
 ```

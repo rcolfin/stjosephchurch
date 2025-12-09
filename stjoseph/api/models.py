@@ -71,3 +71,36 @@ class BroadcastType(str, Enum):
     ALL = "all"
     EVENT = "event"
     PERSISTENT = "persistent"
+
+
+@unique
+class VideoCategory(IntEnum):
+    FILM_AND_ANIMATION = 1
+    AUTOS_AND_VEHICLES = 2
+    MUSIC = 10
+    PETS_AND_ANIMALS = 15
+    SPORTS = 17
+    TRAVEL_AND_EVENTS = 19
+    GAMING = 20
+    PEOPLE_AND_BLOGS = 22
+    COMEDY = 23
+    ENTERTAINMENT = 24
+    NEWS_AND_POLITICS = 25
+    HOWTO_AND_STYLE = 26
+    EDUCATION = 27
+    SCIENCE_AND_TECHNOLOGY = 28
+    NONPROFITS_AND_ACTIVISM = 29
+    MOVIES = 30
+    ANIME_AND_ANIMATION = 31
+    ACTION_AND_ADVENTURE = 32
+    CLASSICS = 33
+    DOCUMENTARY = 35
+    DRAMA = 36
+    FAMILY = 37
+    FOREIGN = 38
+    HORROR = 39
+    SCI_FI_AND_FANTASY = 40
+    THRILLERS = 41
+    SHORTS = 42
+    SHOWS = 43
+    TRAILERS = 44

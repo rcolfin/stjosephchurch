@@ -30,7 +30,7 @@ As a CLI
 To schedule a mass:
 
 ```sh
-python -m stjoseph schedule-mass '2024-12-21 17:30' --public
+python -m stjoseph schedule-mass '2026-01-03 17:30' --public
 ```
 
 To schedule Sunday masses a month in advance:
@@ -64,19 +64,19 @@ python -m stjoseph schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date
 To list masses that were scheduled but for whatever reason didn't air or were cut off after a short amount of time (under 15 minutes), then these are eligible for deletion:
 
 ```sh
- python -m stjoseph list-eligible-for-deletion
- ```
+python -m stjoseph list-eligible-for-deletion
+```
 
  To actually remove them:
 
 ```sh
- python -m stjoseph delete-eligible --no-dry-run
- ```
+python -m stjoseph delete-eligible --no-dry-run
+```
 
 or through the launcher...
 
 ```sh
-scripts/launch.sh schedule-mass '2024-12-21 17:30' --public
+scripts/launch.sh schedule-mass '2026-12-21 17:30' --public
 ```
 
 To schedule Sunday masses a month in advance:

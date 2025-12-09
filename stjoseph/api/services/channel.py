@@ -95,6 +95,7 @@ class Channel:
         scheduled_start_time: datetime.datetime,
         scheduled_end_time: datetime.datetime | None = None,
         is_public: bool = False,
+        category_id: models.VideoCategory = models.VideoCategory.NONPROFITS_AND_ACTIVISM,
         dry_run: bool = False,
     ) -> str:
         broadcast_id = self._upsert_broadcast(
@@ -105,6 +106,7 @@ class Channel:
             scheduled_end_time=scheduled_end_time,
             is_public=is_public,
             dry_run=dry_run,
+            category_id=category_id,
         )
 
         # Upload the thumbnail
@@ -154,6 +156,7 @@ class Channel:
         scheduled_start_time: datetime.datetime,
         scheduled_end_time: datetime.datetime | None = None,
         is_public: bool = False,
+        category_id: models.VideoCategory = models.VideoCategory.NONPROFITS_AND_ACTIVISM,
         dry_run: bool = False,
     ) -> str:
         self._assert_description_len(description)
@@ -163,6 +166,7 @@ class Channel:
                 "title": title,
                 "description": description,
                 "scheduledStartTime": utils.to_gcloud_datetime(scheduled_start_time),
+                "categoryId": str(category_id),
             },
             "status": {"privacyStatus": privacy_status, "selfDeclaredMadeForKids": True},
         }
@@ -204,7 +208,13 @@ class Channel:
                 )
             )
 
-        return cast("str", broadcast_response["id"])
+        video_id = cast("str", broadcast_response["id"])
+
+        # Update the video category
+        request_body = {"id": video_id, "snippet": body["snippet"]}
+        self._execute_with_retry(lambda resource: resource.videos().update(part="snippet", body=request_body))
+
+        return video_id
 
     @cached_property
     @retry(

@@ -36,7 +36,6 @@ def _get_mass_types(ctx: click.Context, param: click.Option, value: tuple[str, .
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -59,7 +58,6 @@ def list_mass_schedules(credentials: PathLike, token: PathLike) -> None:
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -82,7 +80,6 @@ def list_past_mass_schedules(credentials: PathLike, token: PathLike) -> None:
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -110,7 +107,6 @@ def list_eligible_for_deletion(credentials: PathLike, token: PathLike) -> None:
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -151,7 +147,6 @@ def delete_eligible(credentials: PathLike, token: PathLike, dry_run: bool) -> No
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -172,7 +167,6 @@ def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) 
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -234,7 +228,6 @@ def delete_duplicate_broadcasts(credentials: PathLike, token: PathLike, dry_run:
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -333,7 +326,6 @@ async def schedule_mass(  # noqa: PLR0913
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,
@@ -436,7 +428,6 @@ async def schedule_masses(  # noqa: PLR0913
     help="The path to the credentials file",
 )
 @click.option(
-    "-t",
     "--token",
     type=click.Path(exists=False, dir_okay=False),
     default=constants.TOKEN_FILE,

@@ -50,7 +50,7 @@ To schedule the Christ Pageant:
 (Schedules the Christmas Pageant at 4:00 PM.)
 
 ```sh
-python -m stjoseph schedule-christmas-pageant $(date '+%Y-12-24 16:00') --schedule-end $(date '+%Y-12-24 16:30') --public
+python -m stjoseph schedule-christmas-pageant $(date '+%Y-12-24 15:55') --schedule-end $(date '+%Y-12-24 16:30') --public
 ```
 
 To schedule the Christ Pageant mass:
@@ -96,7 +96,7 @@ To schedule the Christ Pageant:
 (Schedules the Christmas Pageant at 4:00 PM.)
 
 ```sh
-scripts/launch.sh schedule-christmas-pageant "$(date -d "+1 month" '+%Y-12-24 16:00')" --schedule-end "$(date -d '+1 month' +%Y-12-24 16:30)" --public
+scripts/launch.sh schedule-christmas-pageant "$(date '+%Y-12-24 15:55')" --schedule-end "$(date '+%Y-12-24 16:30')" --public
 ```
 
 To schedule the Christ Pageant mass:

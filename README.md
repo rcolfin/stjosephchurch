@@ -55,11 +55,18 @@ python -m stjoseph schedule-christmas-pageant $(date '+%Y-12-24 15:55') --schedu
 
 To schedule the Christ Pageant mass:
 
-(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122525-Night.cfm).)
+(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122526-Night.cfm).)
 
 ```sh
 python -m stjoseph schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type night
 ```
+
+To schedule the New Year Day mass (Solemnity of Mary, the Holy Mother of God):
+
+```sh
+python -m stjoseph schedule-mass "$(date '+%Y-01-01 10:00')" --mass-date "$(date '+%Y-01-01')" --schedule-end "$(date '+%Y-01-01 11:00')" --public
+```
+
 
 To list masses that were scheduled but for whatever reason didn't air or were cut off after a short amount of time (under 15 minutes), then these are eligible for deletion:
 
@@ -101,8 +108,14 @@ scripts/launch.sh schedule-christmas-pageant "$(date '+%Y-12-24 15:55')" --sched
 
 To schedule the Christ Pageant mass:
 
-(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122525-Night.cfm).)
+(Schedules the mass on Christmas Eve at 4:30 PM using the Readings for the [Christmas Mass during the Night](https://bible.usccb.org/bible/readings/122526-Night.cfm).)
 
 ```sh
 scripts/launch.sh schedule-mass "$(date '+%Y-12-24 16:30')" --mass-date "$(date '+%Y-12-25')" --schedule-end "$(date '+%Y-12-24 17:30')" --public --type night
+```
+
+To schedule the New Year Day mass (Solemnity of Mary, the Holy Mother of God):
+
+```sh
+scripts/launch.sh schedule-mass "$(date '+%Y-01-01 10:00')" --mass-date "$(date '+%Y-01-01')" --schedule-end "$(date '+%Y-01-01 11:00')" --public
 ```

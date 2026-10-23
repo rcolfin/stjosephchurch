@@ -1,39 +1,37 @@
 from __future__ import annotations
 
-import datetime
-
-import dateutil.tz
+import datetime as dt
 
 from stjoseph.api import constants, models
 
 
-def parse_gcloud_datetime(date_string: str) -> datetime.datetime:
+def parse_gcloud_datetime(date_string: str) -> dt.datetime:
     """Parses a Google Cloud API Date String"""
-    return datetime.datetime.strptime(date_string, constants.GCLOUD_DATE_FMT).replace(tzinfo=datetime.UTC)
+    return dt.datetime.strptime(date_string, constants.GCLOUD_DATE_FMT).replace(tzinfo=dt.UTC)
 
 
-def to_gcloud_datetime(dt: datetime.datetime) -> str:
-    return dt.astimezone(datetime.UTC).strftime(constants.GCLOUD_DATE_FMT)
+def to_gcloud_datetime(value: dt.datetime) -> str:
+    return value.astimezone(dt.UTC).strftime(constants.GCLOUD_DATE_FMT)
 
 
-def is_saturday_pm_mass(date: datetime.datetime) -> bool:
+def is_saturday_pm_mass(date: dt.datetime) -> bool:
     """Determines if the mass is the Saturday PM Mass at 5:30 PM"""
     return date.weekday() == models.Weekday.SATURDAY and (date.hour, date.minute) == constants.SATURDAY_EVENING_MASS
 
 
-def to_saturday_mass(dt: datetime.datetime | datetime.date) -> datetime.datetime:
+def to_saturday_mass(date: dt.datetime | dt.date) -> dt.datetime:
     """Converts the Sunday mass to the 5:30 PM Saturday mass"""
-    assert dt is not None
-    assert dt.weekday() == models.Weekday.SUNDAY
-    saturday = dt - datetime.timedelta(days=1)
-    return datetime.datetime(
+    assert date is not None
+    assert date.weekday() == models.Weekday.SUNDAY
+    saturday = date - dt.timedelta(days=1)
+    return dt.datetime(
         saturday.year,
         saturday.month,
         saturday.day,
         constants.SATURDAY_EVENING_MASS[0],
         constants.SATURDAY_EVENING_MASS[1],
         0,
-        tzinfo=dateutil.tz.tzlocal(),
+        tzinfo=constants.DEFAULT_TIMEZONE,
     )
 
 
@@ -54,22 +52,22 @@ def truncate(string: str, max_length: int = constants.MAX_FIELD_LEN) -> str:
     return string
 
 
-def add_months(dt: datetime.date, months_to_add: int) -> datetime.date:
+def add_months(date: dt.date, months_to_add: int) -> dt.date:
     """Adds the number of monts to the specified datetime."""
-    return datetime.date(
-        dt.year + (dt.month + months_to_add - 1) // 12,
-        (dt.month + months_to_add - 1) % 12 + 1,
-        dt.day,
+    return dt.date(
+        date.year + (date.month + months_to_add - 1) // 12,
+        (date.month + months_to_add - 1) % 12 + 1,
+        date.day,
     )
 
 
-def get_next_christmas_pageant() -> datetime.datetime:
-    now = datetime.datetime.now(tz=constants.DEFAULT_TIMEZONE)
+def get_next_christmas_pageant() -> dt.datetime:
+    now = dt.datetime.now(tz=constants.DEFAULT_TIMEZONE)
     year = now.year
     if now.month == constants.CHRISTMAS_PAGEANT_DATE[0] and now.day > constants.CHRISTMAS_PAGEANT_DATE[1]:
         year += 1
 
-    return datetime.datetime(
+    return dt.datetime(
         year,
         constants.CHRISTMAS_PAGEANT_DATE[0],
         constants.CHRISTMAS_PAGEANT_DATE[1],

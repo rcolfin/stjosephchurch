@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from typing import Final
 
 import jinja2
@@ -17,36 +17,27 @@ Please consider giving this video a like, and subscribing to the channel. Thanks
 """  # noqa: E501
 
 
-def _create_jinja_envirionment() -> jinja2.Environment:
-    return jinja2.Environment(autoescape=False)  # noqa: S701
+_ENV: Final[jinja2.Environment] = jinja2.Environment(autoescape=False)  # noqa: S701
+_DESCRIPTION_TMPL: Final[jinja2.Template] = _ENV.from_string(DESCRIPTION)
 
 
 def generate_description_christmas_pageant() -> str:
-    environment = _create_jinja_envirionment()
-    template = environment.from_string(DESCRIPTION)
-    return template.render()
+    return _DESCRIPTION_TMPL.render()
 
 
 def generate_description(mass: Mass) -> str:
-    environment = _create_jinja_envirionment()
-    template = environment.from_string(DESCRIPTION)
-    text = template.render(text=_get_mass_text(mass), url=mass.url)
-    if len(text) <= constants.MAX_DESCRIPTION_LENGTH:
-        return text
-    text = template.render(text=_get_short_mass_text(mass), url=mass.url)
-    if len(text) <= constants.MAX_DESCRIPTION_LENGTH:
-        return text
-    text = template.render(text=_get_header_mass_text(mass), url=mass.url)
-    if len(text) <= constants.MAX_DESCRIPTION_LENGTH:
-        return text
-    return template.render(url=mass.url)
+    for text_fn in (_get_mass_text, _get_short_mass_text, _get_header_mass_text):
+        text = _DESCRIPTION_TMPL.render(text=text_fn(mass), url=mass.url)
+        if len(text) <= constants.MAX_DESCRIPTION_LENGTH:
+            return text
+    return _DESCRIPTION_TMPL.render(url=mass.url)
 
 
-def generate_christmas_pageant(mass_date: datetime.datetime) -> str:
+def generate_christmas_pageant(mass_date: dt.datetime) -> str:
     return f"Chrismas Pageant {mass_date:%B %-d, %Y - %-I:%M %p}"
 
 
-def generate_title(mass_date: datetime.datetime, title: str) -> str:
+def generate_title(mass_date: dt.datetime, title: str) -> str:
     return f"Mass {mass_date:%B %-d, %Y - %-I:%M %p}: {title}"
 
 

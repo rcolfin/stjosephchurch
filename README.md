@@ -80,10 +80,29 @@ python -m stjoseph list-eligible-for-deletion
 python -m stjoseph delete-eligible --no-dry-run
 ```
 
+To remove scheduled masses for past dates that never went live (prompts before each deletion; use `--force` to skip the prompts or `--dry-run` to only list them):
+
+```sh
+python -m stjoseph delete-stale-schedules
+```
+
+If a mass went live using the broadcast scheduled for a different date (e.g. the October 17 mass was streamed using the October 10 broadcast), correct the title and description using the readings for the date it actually aired (prompts before each correction; use `--force` to skip the prompts):
+
+```sh
+python -m stjoseph correct-mass-dates --dry-run
+python -m stjoseph correct-mass-dates
+```
+
+To correct a specific broadcast, pass its ID and optionally the date it aired and/or the mass date:
+
+```sh
+python -m stjoseph correct-mass-dates <BROADCAST_ID> --date '2026-10-17 17:30'
+```
+
 or through the launcher...
 
 ```sh
-scripts/launch.sh schedule-mass '2026-12-21 17:30' --public
+scripts/launch.sh schedule-mass '2026-05-02 17:30' --public
 ```
 
 To schedule Sunday masses a month in advance:

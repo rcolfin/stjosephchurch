@@ -132,7 +132,7 @@ wheels = [
 
 [[package]]
 name = "catholic-mass-readings"
-version = "0.8.0"
+version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -141,11 +141,10 @@ dependencies = [
     { name = "bs4" },
     { name = "curl-cffi" },
     { name = "html5lib" },
-    { name = "pytz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/9a/da571504a3adbdf09fcb5149fa74376a332fa9fa409b243a458c841191d4/catholic_mass_readings-0.8.0.tar.gz", hash = "sha256:91616a5e0e82d0445cea588d5e63b4f34e953681a34ac2ffb99bd4ce1cc06f42", size = 79695, upload-time = "2026-10-17T02:17:48.44Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/35/6a86048be52af13439e57f4f79ba47b7a3ba0b1110d02241f25a8bac15d0/catholic_mass_readings-0.8.1.tar.gz", hash = "sha256:1893f898567ee6cb3f0cce49f43d83303dc261edd07be0190d6db13e05caef76", size = 79694, upload-time = "2026-10-23T23:17:17.28Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/b8/96fa28ccf1dbc38b3b408f0e088fbc8b64b2e0428b4fe32c9786b361f643/catholic_mass_readings-0.8.0-py3-none-any.whl", hash = "sha256:d0e75d1d021c9bd958cb5b1ef80964a3958baa70b14dafda9279e86abe0f81a2", size = 34281, upload-time = "2026-10-17T02:17:47.305Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/b0/103321cec5d730459729f8039b7dab3c7cb17b1fe8329279dfb4df846325/catholic_mass_readings-0.8.1-py3-none-any.whl", hash = "sha256:d9e6cd26f223ba9022bb587540f4cae0ab313d49de6eccc4b80365b9c8011ab0", size = 34302, upload-time = "2026-10-23T23:17:16.42Z" },
 ]
 
 [package.optional-dependencies]
@@ -1298,15 +1297,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytz"
-version = "2026.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/14/21/d83d6ef28c4c912c4bb4d1dcf591f7b8c6bde87b9c66f9f454677314e16d/pytz-2026.5.tar.gz", hash = "sha256:fa23724b9c486543b9ff54a327ee7569ac83ade54bb9afd0fc18676620401c86", size = 318572, upload-time = "2026-10-04T02:37:58.719Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/ef/c66110d46fb800dda0bf33164182dfadabe26a90e4476844d502a23dca8e/pytz-2026.5-py2.py3-none-any.whl", hash = "sha256:e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03", size = 506342, upload-time = "2026-10-04T02:37:56.814Z" },
-]
-
-[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1404,7 +1394,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "asyncclick", specifier = ">=8.1.8,<9.0.0" },
-    { name = "catholic-mass-readings", extras = ["browser"], specifier = ">=0.8.0,<1.0.0" },
+    { name = "catholic-mass-readings", extras = ["browser"], specifier = ">=0.8.1,<1.0.0" },
     { name = "google-api-python-client", specifier = ">=2.161.0,<3.0.0" },
     { name = "google-auth", specifier = ">=2.38.0,<3.0.0" },
     { name = "google-auth-oauthlib", specifier = ">=1.2.1,<2.0.0" },

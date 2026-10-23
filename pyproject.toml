@@ -30,7 +30,7 @@ dependencies = [
     "google-api-python-client<3.0.0,>=2.161.0",
     "google-auth-oauthlib<2.0.0,>=1.2.1",
     "asyncclick<9.0.0,>=8.1.8",
-    "catholic-mass-readings[browser]<1.0.0,>=0.8.0",
+    "catholic-mass-readings[browser]<1.0.0,>=0.8.1",
     "jinja2<4.0.0,>=3.1.5",
     "tenacity<10.0.0,>=9.1.2"
 ]

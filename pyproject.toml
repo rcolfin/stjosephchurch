@@ -30,11 +30,9 @@ dependencies = [
     "google-api-python-client<3.0.0,>=2.161.0",
     "google-auth-oauthlib<2.0.0,>=1.2.1",
     "asyncclick<9.0.0,>=8.1.8",
-    "catholic-mass-readings<1.0.0,>=0.4.3",
+    "catholic-mass-readings[browser]<1.0.0,>=0.8.1",
     "jinja2<4.0.0,>=3.1.5",
-    "python-dateutil<3.0.0.0,>=2.9.0.post0",
-    "pytz>=2024.2,<2027.0",
-    "tenacity>=9.1.2"
+    "tenacity<10.0.0,>=9.1.2"
 ]
 
 [dependency-groups]
@@ -45,8 +43,6 @@ dev = [
     "pytest-cov>=6.0.0,<8.0.0",
     "pytest-ruff<1.0.0,>=0.4.1",
     "pytest-mypy>=0.10.3,<2.0.0",
-    "types-pytz>=2025.1.0.20250204,<2027.0.0.0",
-    "types-python-dateutil<3.0.0.0,>=2.9.0.20241206",
 ]
 
 [tool.pytest.ini_options]

@@ -14,7 +14,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from stjoseph.api import constants, models, oauth2, resources, utils
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import Callable, Iterable
 
 
@@ -56,13 +56,25 @@ class Channel:
             self.broadcasts(models.BroadcastStatus.COMPLETED, models.BroadcastType.EVENT),
         )
 
+    def list_stale_livestreams(self) -> Iterable[models.LiveStream]:
+        """Gets all the scheduled streams for past dates that never went live."""
+        return (sch for sch in self.list_scheduled_livestreams() if sch.is_stale())
+
+    def list_misdated_livestreams(self) -> Iterable[models.LiveStream]:
+        """Gets all the completed streams that went live on a different date than they were scheduled for."""
+        return (sch for sch in self.list_completed_livestreams() if sch.get_aired_start() is not None)
+
+    def get_livestream(self, broadcast_id: str) -> models.LiveStream | None:
+        items = self._get_pages("items", part="id,snippet,status", id=broadcast_id)
+        return next(map(self._create_live_stream_from_item, items), None)
+
     def list_eligible_for_deletion(self) -> Iterable[models.LiveStream]:
         """Gets all the scheduled streams that did not broadcast or were too short and can be deleted."""
         return (sch for sch in self.list_completed_livestreams() if sch.is_eligible_for_deletion())
 
-    def get_scheduled_dates(self) -> dict[datetime.datetime, str]:
+    def get_scheduled_dates(self) -> dict[dt.datetime, str]:
         """Gets a list of the upcoming scheduled dates to id."""
-        results: dict[datetime.datetime, str] = {}
+        results: dict[dt.datetime, str] = {}
         for sch in self.list_scheduled_livestreams():
             if sch.scheduled_start is None:
                 continue
@@ -72,9 +84,9 @@ class Channel:
             results[sch.scheduled_start] = sch.id
         return results
 
-    def get_duplicated_schedules_dates(self) -> dict[datetime.datetime, list[str]]:
+    def get_duplicated_schedules_dates(self) -> dict[dt.datetime, list[str]]:
         """Gets a map of all the duplicated scheduled streams."""
-        results: dict[datetime.datetime, list[str]] = {}
+        results: dict[dt.datetime, list[str]] = {}
         for sch in self.list_scheduled_livestreams():
             if sch.scheduled_start is None:
                 continue
@@ -92,11 +104,13 @@ class Channel:
         self,
         title: str,
         description: str,
-        scheduled_start_time: datetime.datetime,
-        scheduled_end_time: datetime.datetime | None = None,
+        scheduled_start_time: dt.datetime,
+        scheduled_end_time: dt.datetime | None = None,
+        *,
         is_public: bool = False,
         category_id: models.VideoCategory = models.VideoCategory.NONPROFITS_AND_ACTIVISM,
         dry_run: bool = False,
+        recording_location: models.RecordingLocation | None = models.DEFAULT_LOCATION,
     ) -> str:
         broadcast_id = self._upsert_broadcast(
             None,
@@ -107,6 +121,7 @@ class Channel:
             is_public=is_public,
             dry_run=dry_run,
             category_id=category_id,
+            recording_location=recording_location,
         )
 
         # Upload the thumbnail
@@ -127,10 +142,12 @@ class Channel:
         broadcast_id: str,
         title: str,
         description: str,
-        scheduled_start_time: datetime.datetime,
-        scheduled_end_time: datetime.datetime | None = None,
+        scheduled_start_time: dt.datetime,
+        *,
+        scheduled_end_time: dt.datetime | None = None,
         is_public: bool = False,
         dry_run: bool = False,
+        recording_location: models.RecordingLocation | None = models.DEFAULT_LOCATION,
     ) -> str:
         broadcast_id = self._upsert_broadcast(
             broadcast_id,
@@ -140,6 +157,7 @@ class Channel:
             scheduled_end_time=scheduled_end_time,
             is_public=is_public,
             dry_run=dry_run,
+            recording_location=recording_location,
         )
         logger.info(
             "Successfully updated scheduled ID: %s, url: %s",
@@ -148,16 +166,41 @@ class Channel:
         )
         return broadcast_id
 
+    def update_video_details(self, video_id: str, title: str, description: str, dry_run: bool = False) -> None:
+        """Updates the title and description of an existing video, preserving the rest of its snippet."""
+        self._assert_description_len(description)
+        logger.info("Updating video %s%s", video_id, " [DRY-RUN]" if dry_run else "")
+        logger.info("Title: %s", title)
+        logger.info("Description: %s", utils.truncate(description, constants.MAX_FIELD_LEN))
+        if dry_run:
+            return
+
+        response = self._execute_with_retry(lambda resource: resource.videos().list(part="snippet", id=video_id))
+        items = response.get("items", [])
+        if not items:
+            msg = f"Video {video_id} was not found"
+            raise ValueError(msg)
+
+        # Only send back the writable fields; the rest of the snippet is read-only.
+        current = items[0]["snippet"]
+        snippet = {k: current[k] for k in ("categoryId", "tags", "defaultLanguage") if k in current}
+        snippet.update(title=title, description=description)
+        request_body = {"id": video_id, "snippet": snippet}
+        self._execute_with_retry(lambda resource: resource.videos().update(part="snippet", body=request_body))
+        logger.info("Successfully updated video ID: %s", video_id)
+
     def _upsert_broadcast(  # noqa: PLR0913
         self,
         broadcast_id: str | None,
         title: str,
         description: str,
-        scheduled_start_time: datetime.datetime,
-        scheduled_end_time: datetime.datetime | None = None,
+        scheduled_start_time: dt.datetime,
+        *,
+        scheduled_end_time: dt.datetime | None = None,
         is_public: bool = False,
         category_id: models.VideoCategory = models.VideoCategory.NONPROFITS_AND_ACTIVISM,
         dry_run: bool = False,
+        recording_location: models.RecordingLocation | None = models.DEFAULT_LOCATION,
     ) -> str:
         self._assert_description_len(description)
         privacy_status = "public" if is_public else "private"
@@ -211,8 +254,13 @@ class Channel:
         video_id = cast("str", broadcast_response["id"])
 
         # Update the video category
-        request_body = {"id": video_id, "snippet": body["snippet"]}
-        self._execute_with_retry(lambda resource: resource.videos().update(part="snippet", body=request_body))
+        request_body: dict[str, Any] = {"id": video_id, "snippet": body["snippet"]}
+        update_parts = "snippet"
+        if recording_location is not None:
+            request_body["recordingDetails"] = recording_location.to_recording_details()
+            update_parts = "snippet,recordingDetails"
+
+        self._execute_with_retry(lambda resource: resource.videos().update(part=update_parts, body=request_body))
 
         return video_id
 
@@ -283,7 +331,7 @@ class Channel:
             raise
 
     @staticmethod
-    def _parse_datetime(date_string: str | None) -> datetime.datetime | None:
+    def _parse_datetime(date_string: str | None) -> dt.datetime | None:
         return utils.parse_gcloud_datetime(date_string) if date_string is not None else None
 
     @staticmethod

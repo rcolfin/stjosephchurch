@@ -1,8 +1,7 @@
-import datetime
+import datetime as dt
 from pathlib import Path
 from typing import Final
-
-import pytz
+from zoneinfo import ZoneInfo
 
 MAX_RETRIES: Final[int] = 2
 
@@ -27,6 +26,12 @@ NO_OP: Final[str] = "NOOP"
 
 LIVE_STREAMING_URL_FMT: Final[str] = "https://studio.youtube.com/video/{VIDEO_ID}/livestreaming"
 
-DEFAULT_TIMEZONE: Final[datetime.tzinfo] = pytz.timezone("America/New_York")
+DEFAULT_TIMEZONE: Final[dt.tzinfo] = ZoneInfo("America/New_York")
 
 MAX_DESCRIPTION_LENGTH: Final[int] = 5000  # the description maximum length
+
+YOUTUBE_RECORDING_LOCATION_DESCRIPTION: Final[str] = "St Joseph Roman Catholic Church Comly Road, Lincoln Park, NJ"
+YOUTUBE_CAPTION_CERTIFICATION: Final[str] = (
+    "Caption certification: This content has never aired on television in the U.S."
+)
+YOUTUBE_NO_ALTERED_CONTENT_STATEMENT: Final[str] = "No altered content."

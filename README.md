@@ -23,6 +23,37 @@ Run [scripts/lock.sh](../scripts/lock.sh)
 Run [scripts/console.sh](../scripts/console.sh) uv run python -m stjoseph
 
 
+## Authentication
+
+The YouTube Data API does not support service accounts, so the CLI authenticates as you with an OAuth 2.0
+client secret (`credentials.json`) the first time, then reuses the refresh token saved in `token.json`.
+The paths can be set with `--credentials` / `--token` or `STJOSEPH_CREDENTIALS` / `STJOSEPH_TOKEN`, and
+`--headless` (`STJOSEPH_HEADLESS=1`) fails instead of opening a browser when the token cannot be refreshed.
+
+Both files are stored in Secret Manager (`STJOSEPH_YOUTUBE_CLIENT_SECRET` and `STJOSEPH_YOUTUBE_TOKEN`, created by
+[terraform-gcp](https://github.com/rcolfin/terraform-gcp)). [scripts/launch.sh](scripts/launch.sh) downloads them
+before running the CLI and uploads the token again whenever you re-authenticate.
+
+> [!IMPORTANT]
+> The OAuth consent screen must be published (**Google Auth Platform → Audience → Publish app**). While it is in
+> *Testing*, Google expires refresh tokens after 7 days.
+
+## Weekly Scheduling
+
+The `stjoseph-schedule-masses` Cloud Run Job runs every Monday at 6 AM ET and schedules the following week's mass:
+
+```sh
+python -m stjoseph schedule-masses --public --days-ahead 7
+```
+
+Masses that are already scheduled are skipped, so it can be re-run safely:
+
+```sh
+gcloud run jobs execute stjoseph-schedule-masses --region us-central1
+```
+
+The image is built by [cloudbuild.yaml](cloudbuild.yaml) on every push to `main`.
+
 ## API Usage:
 
 As a CLI

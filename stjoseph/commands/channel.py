@@ -3,17 +3,14 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 import asyncclick as click
 from catholic_mass_readings import USCCB, models
 
 from stjoseph.api import constants, generators, oauth2, services, utils
 from stjoseph.api import models as api_models
-from stjoseph.commands.common import cli
-
-if TYPE_CHECKING:
-    from os import PathLike
+from stjoseph.commands.common import cli, credentials_options
 
 logger = logging.getLogger(__name__)
 
@@ -38,21 +35,8 @@ def _get_mass_types(ctx: click.Context, param: click.Option, value: tuple[str, .
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
-def list_mass_schedules(credentials: PathLike, token: PathLike) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+@credentials_options
+def list_mass_schedules(creds: oauth2.CredentialsManager) -> None:
     channel_svc = services.Channel(creds)
     streams = channel_svc.list_scheduled_livestreams()
     for stream in streams:
@@ -60,21 +44,8 @@ def list_mass_schedules(credentials: PathLike, token: PathLike) -> None:
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
-def list_past_mass_schedules(credentials: PathLike, token: PathLike) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+@credentials_options
+def list_past_mass_schedules(creds: oauth2.CredentialsManager) -> None:
     channel_svc = services.Channel(creds)
     streams = channel_svc.list_completed_livestreams()
     for stream in streams:
@@ -82,21 +53,8 @@ def list_past_mass_schedules(credentials: PathLike, token: PathLike) -> None:
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
-def list_eligible_for_deletion(credentials: PathLike, token: PathLike) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+@credentials_options
+def list_eligible_for_deletion(creds: oauth2.CredentialsManager) -> None:
     channel_svc = services.Channel(creds)
     streams = channel_svc.list_eligible_for_deletion()
     any_eligible_for_deletion = False
@@ -109,27 +67,14 @@ def list_eligible_for_deletion(credentials: PathLike, token: PathLike) -> None:
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--dry-run",
     type=bool,
     is_flag=True,
     help="Flag indicating whether this is a dry-run",
 )
-def delete_eligible(credentials: PathLike, token: PathLike, dry_run: bool) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+def delete_eligible(creds: oauth2.CredentialsManager, dry_run: bool) -> None:
     channel_svc = services.Channel(creds)
     streams = channel_svc.list_eligible_for_deletion()
     any_eligible_for_deletion = False
@@ -145,19 +90,7 @@ def delete_eligible(credentials: PathLike, token: PathLike, dry_run: bool) -> No
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--dry-run",
     type=bool,
@@ -170,9 +103,8 @@ def delete_eligible(credentials: PathLike, token: PathLike, dry_run: bool) -> No
     is_flag=True,
     help="Flag indicating whether to skip the confirmation prompt.",
 )
-def delete_stale_schedules(credentials: PathLike, token: PathLike, dry_run: bool, force: bool) -> None:
+def delete_stale_schedules(creds: oauth2.CredentialsManager, dry_run: bool, force: bool) -> None:
     """Deletes scheduled masses for past dates that never went live, prompting for each unless --force."""
-    creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
     any_stale = False
     for stream in channel_svc.list_stale_livestreams():
@@ -191,47 +123,21 @@ def delete_stale_schedules(credentials: PathLike, token: PathLike, dry_run: bool
     "broadcast_id",
     type=str,
 )
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
-def delete_broadcast(broadcast_id: str, credentials: PathLike, token: PathLike) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+@credentials_options
+def delete_broadcast(broadcast_id: str, creds: oauth2.CredentialsManager) -> None:
     channel_svc = services.Channel(creds)
     channel_svc.delete_broadcast(broadcast_id)
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--dry-run",
     type=bool,
     is_flag=True,
     help="Flag indicating whether this is a dry-run",
 )
-def delete_duplicate_broadcasts(credentials: PathLike, token: PathLike, dry_run: bool) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+def delete_duplicate_broadcasts(creds: oauth2.CredentialsManager, dry_run: bool) -> None:
     channel_svc = services.Channel(creds)
     duplicate_broadcasts = channel_svc.get_duplicated_schedules_dates()
     if not duplicate_broadcasts:
@@ -272,19 +178,7 @@ def delete_duplicate_broadcasts(credentials: PathLike, token: PathLike, dry_run:
     help="The mass type",
     callback=_get_mass_types,
 )
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--public",
     type=bool,
@@ -311,8 +205,7 @@ async def schedule_mass(  # noqa: PLR0913
     schedule_end: dt.datetime | None,
     mass_date: dt.datetime | None,
     types: list[models.MassType] | None,
-    credentials: PathLike,
-    token: PathLike,
+    creds: oauth2.CredentialsManager,
     public: bool,
     dry_run: bool,
     force: bool,
@@ -323,7 +216,6 @@ async def schedule_mass(  # noqa: PLR0913
     if schedule_end is None:
         schedule_end = date + dt.timedelta(hours=1)
 
-    creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
 
     # Check if this mass is already scheduled:
@@ -360,6 +252,11 @@ async def schedule_mass(  # noqa: PLR0913
 @click.option("-s", "--start", type=click.DateTime([constants.DATE_FMT]), default=_TODAY)
 @click.option("-e", "--end", type=click.DateTime([constants.DATE_FMT]))
 @click.option(
+    "--days-ahead",
+    type=click.IntRange(min=0),
+    help="Schedule masses up to this many days after the start date (instead of --end)",
+)
+@click.option(
     "-t",
     "--type",
     "types",
@@ -368,19 +265,7 @@ async def schedule_mass(  # noqa: PLR0913
     help="The mass type",
     callback=_get_mass_types,
 )
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--public",
     type=bool,
@@ -403,18 +288,23 @@ async def schedule_masses(  # noqa: PLR0913
     start: dt.datetime,
     *,
     end: dt.datetime | None,
+    days_ahead: int | None,
     types: list[models.MassType] | None,
-    credentials: PathLike,
-    token: PathLike,
+    creds: oauth2.CredentialsManager,
     public: bool,
     dry_run: bool,
     force: bool,
 ) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
+    if end is not None and days_ahead is not None:
+        msg = "--end and --days-ahead are mutually exclusive"
+        raise click.UsageError(msg)
+
     channel_svc = services.Channel(creds)
 
     start_date = start.date()
     end_date = None if end is None else end.date()
+    if days_ahead is not None:
+        end_date = start_date + dt.timedelta(days=days_ahead)
 
     # Check if this mass is already scheduled:
     scheduled_dates = channel_svc.get_scheduled_dates()
@@ -479,19 +369,7 @@ async def schedule_masses(  # noqa: PLR0913
     type=click.DateTime([constants.DATE_TIME_FMT]),
     help="The time when the broadcast is complete",
 )
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--public",
     type=bool,
@@ -514,13 +392,11 @@ async def schedule_christmas_pageant(  # noqa: PLR0913
     date: dt.datetime,
     *,
     schedule_end: dt.datetime | None,
-    credentials: PathLike,
-    token: PathLike,
+    creds: oauth2.CredentialsManager,
     public: bool,
     dry_run: bool,
     force: bool,
 ) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
 
     schedule_end = date + dt.timedelta(minutes=30) if schedule_end is None else schedule_end.astimezone(dt.UTC)
@@ -552,19 +428,7 @@ async def schedule_christmas_pageant(  # noqa: PLR0913
 
 
 @cli.command()
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "-s",
     "--status",
@@ -582,12 +446,10 @@ async def schedule_christmas_pageant(  # noqa: PLR0913
     default=str(api_models.BroadcastType.ALL),
 )
 def broadcasts(
-    credentials: PathLike,
-    token: PathLike,
+    creds: oauth2.CredentialsManager,
     broadcast_status: api_models.BroadcastStatus,
     broadcast_type: api_models.BroadcastType,
 ) -> None:
-    creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
     broadcasts = channel_svc.broadcasts(
         api_models.BroadcastStatus(broadcast_status.lower()), api_models.BroadcastType(broadcast_type.lower())
@@ -623,19 +485,7 @@ def broadcasts(
     help="The mass type",
     callback=_get_mass_types,
 )
-@click.option(
-    "-c",
-    "--credentials",
-    type=click.Path(exists=True, dir_okay=False),
-    default=constants.CREDENTIALS_FILE,
-    help="The path to the credentials file",
-)
-@click.option(
-    "--token",
-    type=click.Path(exists=False, dir_okay=False),
-    default=constants.TOKEN_FILE,
-    help="The path to the token file",
-)
+@credentials_options
 @click.option(
     "--dry-run",
     type=bool,
@@ -656,8 +506,7 @@ async def correct_mass_dates(  # noqa: PLR0913
     date: dt.datetime | None,
     mass_date: dt.datetime | None,
     types: list[models.MassType] | None,
-    credentials: PathLike,
-    token: PathLike,
+    creds: oauth2.CredentialsManager,
     dry_run: bool,
     force: bool,
 ) -> None:
@@ -666,7 +515,6 @@ async def correct_mass_dates(  # noqa: PLR0913
     Without a BROADCAST_ID, all completed broadcasts that aired on a different date than scheduled are corrected.
     Prompts before each correction unless --force.
     """
-    creds = oauth2.CredentialsManager(credentials, token)
     channel_svc = services.Channel(creds)
 
     if broadcast_id is None:

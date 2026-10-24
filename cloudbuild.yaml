@@ -1,0 +1,38 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          docker build \
+            --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --build-arg GIT_COMMIT="$SHORT_SHA" \
+            -t gcr.io/$PROJECT_ID/stjoseph \
+            . \
+            --pull
+
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          docker push gcr.io/$PROJECT_ID/stjoseph
+
+  # The job is created by terraform (terraform-gcp/church.tf); point it at the new image if it exists.
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          if gcloud run jobs describe stjoseph-schedule-masses --region us-central1 > /dev/null 2>&1; then
+            gcloud run jobs update \
+              stjoseph-schedule-masses \
+              --region us-central1 \
+              --image gcr.io/$PROJECT_ID/stjoseph
+          fi
+
+images:
+  - 'gcr.io/$PROJECT_ID/stjoseph'

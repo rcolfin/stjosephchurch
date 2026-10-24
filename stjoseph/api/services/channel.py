@@ -321,7 +321,7 @@ class Channel:
         try:
             return request_factory(self._resource).execute()
         except HttpError as e:
-            if e.status_code == HTTPStatus.FORBIDDEN:
+            if self._is_invalid_token_error(e):
                 logger.exception("Token failed to be refreshed", exc_info=False)
                 self._reset_resource()
             raise
@@ -329,6 +329,18 @@ class Channel:
             logger.exception("Token failed to be refreshed", exc_info=False)
             self._reset_resource()
             raise
+
+    @staticmethod
+    def _is_invalid_token_error(e: HttpError) -> bool:
+        """
+        Determines if the error is due to the token itself, as opposed to e.g. an exhausted quota (also a 403).
+        """
+        if e.status_code == HTTPStatus.UNAUTHORIZED:
+            return True
+        details = e.error_details if isinstance(e.error_details, list) else []
+        return e.status_code == HTTPStatus.FORBIDDEN and any(
+            isinstance(d, dict) and d.get("reason") == "insufficientPermissions" for d in details
+        )
 
     @staticmethod
     def _parse_datetime(date_string: str | None) -> dt.datetime | None:
